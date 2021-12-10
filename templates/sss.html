@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <style>
+        #slideTool{
+            width: 305px;
+            height: 3px;
+            position: relative;
+            background-color: lightgray;
+            display: inline-block;
+        }
+        #slideLeft{width: 0px;height: 3px;background-color: lightgray;position: absolute;z-index: 20;}
+        #slideRight{width: 300px;height: 3px;background: #ab6969;position: absolute;}
+        #slider1{height: 15px;width: 15px;background: white;border: 1px solid #ab6969;display: block;border-radius: 10px;position: absolute;top: -6px;z-index: 20;}
+        #slider2{height: 15px;width: 15px;background: white;border: 1px solid #ab6969;display: block;border-radius: 10px;position: absolute;top: -6px;left:300px;z-index: 20;}
+        #value1{
+            margin-top: -25px;
+            position: absolute;
+            width: 30px;
+            background-color: black;
+            color: white;
+            text-align: center;
+            margin-left: -20px;
+            border-radius: 3px;
+        }
+        #value2{
+            margin-top: -25px;
+            position: absolute;
+            width: 30px;
+            background-color: black;
+            color: white;
+            text-align: center;
+            border-radius: 3px;
+        }
+        #slideToolBorder{
+            margin-left: 80px;
+            margin-top: 50px;
+            background-color: white;
+            width: 400px;
+            /*border: solid 1px brown;*/
+        }
+        #slideTitle{
+            display: inline-block;
+            background-color: #ab6969;
+            height: 30px;
+            width: 70px;
+            text-align: center;
+            line-height: 30px;
+            /*border-left: solid 1px brown;*/
+            border-right: solid 1px brown;
+        }
+        #titleSpan{
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div>ss</div>
+<div id="slideToolCtrol">
+    <div id="slideToolBorder">
+<!--        <div id="slideTitle">-->
+<!--            <span id="titleSpan">档位</span>-->
+<!--        </div>-->
+        <div id="slideTool" class="slideTool">
+            <div id="slideLeft" class="slideLeft">
+	 			<span id="slider1" class="slider1">
+	 				<span id="value1" value="0">0</span>
+	 			</span>
+            </div>
+            <div id="slideRight" class="slideRight">
+	 			<span id="slider2" class="slider2">
+	 				<span id="value2" value="31">31</span>
+	 			</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+<script>
+    var slider1 =document.getElementById("slider1");
+    var slider2 =document.getElementById("slider2");
+    var slideTool =document.getElementById("slideTool");
+    var slideLeft =document.getElementById("slideLeft");
+    var slideRight =document.getElementById("slideRight");
+    var P1 =document.getElementById("p1");
+    //滑块1的鼠标按下事件
+    slider1.onmousedown=function(e){
+        var evt =e||event;
+        var x =evt.offsetX;
+        var y =evt.offsetY;
+        console.log("leftMouseDown");
+        //当触发滑块1鼠标按下事件时绑定鼠标移动事件
+        document.onmousemove=function(e){
+            var evt =e||event;
+            console.log(evt.clientX,slideTool.offsetLeft,x)
+            //根据鼠标的位置和外层的相对偏移量设置滑块的位置
+            slider1.style.left=evt.clientX-slideTool.offsetLeft-x+"px";
+            if(evt.clientX-slideTool.offsetLeft-x<=0){
+                slider1.style.left="0px";
+            }
+            if(evt.clientX-slideTool.offsetLeft-x>=300){
+                slider1.style.left="300px";
+            }
+            if(slider1.offsetLeft >= slider2.offsetLeft-10){
+                //slider1.style.left = slider2.style.left;
+                slider1.style.left = slider2.offsetLeft - 10 + "px";
+            }
+            //根据滑块的偏移量计算数值
+            var value = slider1.offsetLeft/100;
+            slideLeft.style.width=slider1.offsetLeft+"px";
+            // value = value;
+            $("#value1").text(value);
+            $("#value1").attr("value",value);
+        }
+        //当鼠标按键抬起时解绑鼠标移动事件
+        document.onmouseup=function(){
+            document.onmousemove=null;
+        }
+    }
+    slider2.onmousedown=function(e){
+        var evt =e||event;
+        var x =evt.offsetX;
+        var y =evt.offsetY;
+        document.onmousemove=function(e){
+            var evt =e||event;
+            slider2.style.left=evt.clientX-slideTool.offsetLeft-x+"px";
+            if(evt.clientX-slideTool.offsetLeft-x<=0){
+                slider2.style.left="0px";
+            }
+            if(evt.clientX-slideTool.offsetLeft-x>=300){
+                slider2.style.left="300px";
+            }
+            if(slider2.offsetLeft-10 <= slider1.offsetLeft){
+                //slider2.style.left = slider1.style.left;
+                slider2.style.left = slider1.offsetLeft + 10 + "px";
+            }
+            var value = Math.floor(slider2.offsetLeft/10);
+            slideRight.style.width=slider2.offsetLeft+"px";
+            value = value+1 ;
+            if(parseInt(value) < 10){
+                value = '0' + value;
+            }
+            $("#value2").text(value);
+            $("#value2").attr("value",value);
+        }
+        document.onmouseup=function(){
+            document.onmousemove=null;
+        }
+    }
+
+</script>
+</html>

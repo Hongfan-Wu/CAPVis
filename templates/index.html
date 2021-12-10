@@ -1,0 +1,3444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HTSD_AS</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/lodash.js/4.17.15/lodash.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<!--    <script src="../static/jquery-3.2.1.min.js"></script>-->
+    <script src="{{url_for('static', filename='modules/jquery/jquery.min.js')}}"></script>
+    <script src="../static/d3.min.js"></script>
+    <script src="../static/Stat.js"></script>
+<!--    <script src="../static/histogram.js"></script>-->
+    <script  src="https://cdn.jsdelivr.net/npm/echarts@5.0.2/dist/echarts.min.js"></script>
+    <script  src="https://cdn.jsdelivr.net/npm/echarts-gl@2/dist/echarts-gl.min.js"></script>
+    <link rel="stylesheet" href="../static/other_style.css">
+    <style>
+        /* Switch开关样式 */
+        input[type='checkbox'].switch {
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 10px;
+            transition: border-color .3s, background-color .3s;
+        }
+
+        input[type='checkbox'].switch::after {
+            content: 'OFF';
+            display: inline-block;
+            font-size: 12px;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0, 0, 2px, #999;
+            transition: .4s;
+            top: 2px;
+            position: absolute;
+            left: 2px;
+        }
+
+        input[type='checkbox'].switch:checked {
+            background: rgb(19, 206, 102);
+        }
+
+        /* 当input[type=checkbox]被选中时：伪元素显示下面样式 位置发生变化 */
+        input[type='checkbox'].switch:checked::after {
+            content: 'ON';
+            font-size: 12px;
+            position: absolute;
+            left: 55%;
+            top: 2px;
+        }
+    </style>
+</head>
+<!--<div style="position: absolute;margin-left: 1300px">-->
+<!--    <select id="sel" onchange="static_num()">-->
+<!--        <option value="高温过热器出口段横向">高温过热器出口段横向</option>-->
+<!--        <option value ="垂直水冷壁">垂直水冷壁</option>-->
+<!--        <option value ="螺旋水冷壁">螺旋水冷壁</option>-->
+<!--        <option value ="低温过热器下部屏出口段后墙横向">低温过热器下部屏出口段后墙横向</option>-->
+<!--        &lt;!&ndash;        <option value ="低温过热器下部屏出口段前墙横向">低温过热器下部屏出口段前墙横向</option>&ndash;&gt;-->
+<!--        <option value ="低温过热器上部屏出口段后墙横向">低温过热器上部屏出口段后墙横向</option>-->
+<!--        <option value ="后墙隔墙出口段">后墙隔墙出口段</option>-->
+<!--    </select>-->
+<!--    <input id="btnOperate" type="button" value="选择" onclick="tiaozhuan()" />-->
+<!--    <input id="btnOperate2" type="button" value="动画" onclick="myMove()" />-->
+<!--</div>-->
+<div id="container" style="height: 450px;width: 450px;margin-left: 0px;margin-top: 0px;position: absolute"></div>
+<div>
+    <span style="height: 20px;width: 150px;margin-left: 90px;margin-top: 467px;font-size:18px;position: absolute">Cluster view</span>
+    <input type="checkbox" id="onoffswitch" style="margin-left: 200px;margin-top: 470px;position: absolute" class="switch">
+    <span style="height: 20px;width: 150px;margin-left: 250px;margin-top: 467px;font-size:18px;position: absolute">Factor view</span>
+    <input type="checkbox" id="onoffswitch2" checked ='checked' style="margin-left: 360px;margin-top: 470px;position: absolute" class="switch">
+</div>
+<div id="yuy">
+    <span style="height: 20px;width: 150px;margin-left: 50px;margin-top: 945px;font-size:18px;position: absolute">Fish eye</span>
+    <input type="checkbox" id="onoffswitch3" style="margin-left: 140px;margin-top: 948px;position: absolute" class="switch">
+</div>
+<div id="container3" style="height: 450px;width: 450px;margin-left: 20px;margin-top: 500px;position: absolute"></div>
+<div id="container2" style="height: 300px;width: 500px;margin-left: 450px;margin-top: 0px;position: absolute"></div>
+<div id="container4" style="height: 450px;width: 500px;margin-left: 450px;margin-top: 500px;position: absolute"></div>
+<div id="container5" style="height: 400px;width: 450px;margin-left: 950px;margin-top: 570px;position: absolute"></div>
+<div id="container9" style="height: 250px;width: 450px;margin-left: 470px;margin-top: 280px;position: absolute"></div>
+<div id="ccy" style="font-size:10px;display: none;height: 50px;width: 100px;margin-left: 650px;margin-top: 300px;position: absolute">
+    <input id="range" type="range" min="5" max="60" value="5"step="5"  oninput="change()" onchange="change()">
+    <span id="value">5</span>
+</div>
+<form id="f" style="height: 300px;width: 190px;margin-left: 50px;position: absolute">
+
+</form>
+<div class="modal fade" id="pars_Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" >
+    <div class="modal-dialog modal-lg" style="height: auto;">
+        <div class="modal-content" style="height: auto;overflow-y: auto">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+                    &times;
+                </button>
+                <h4 class="modal-title" id="myModalLabel">
+                    参数选择
+                </h4>
+            </div>
+            <div class="modal-body" style="font-size: 15px;overflow-y: auto">
+                参数组合X：<div id="input_pars">
+                </div><br/>
+                参数组合Y：<div id="output_par">
+                </div><br/>
+            </div>
+            <div class="modal-footer">
+                <button id="submit_pars" type="button" class="btn btn-default" data-dismiss="modal">确定
+                </button>
+                <!--<button id="submit_pars" type="button" class="btn btn-primary">-->
+                <!--确定-->
+                <!--</button>-->
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal -->
+</div>
+<div id="up_left" style="width: 500px;float: right;height: 800px;overflow-y: auto;overflow-x:hidden">
+    <!--控制面板-->
+<!--    <div style="position: absolute;margin-left: 1300px">-->
+        <div>
+        <select id="sel" style="font-size: 15px; border-radius: 5px;width: 180px" onchange="static_num()">
+            <option value="高温过热器出口段横向">高温过热器出口段横向</option>
+            <option value ="垂直水冷壁">垂直水冷壁</option>
+            <option value ="螺旋水冷壁">螺旋水冷壁</option>
+            <option value ="低温过热器下部屏出口段后墙横向">低温过热器下部屏出口段后墙横向</option>
+            <!--        <option value ="低温过热器下部屏出口段前墙横向">低温过热器下部屏出口段前墙横向</option>-->
+            <option value ="低温过热器上部屏出口段后墙横向">低温过热器上部屏出口段后墙横向</option>
+            <option value ="后墙隔墙出口段">后墙隔墙出口段</option>
+        </select>
+        <input id="btnOperate" class="btn btn-primary" type="button" value="选择" onclick="tiaozhuan()" />
+        <input id="btnOperate2" class="btn btn-primary" type="button" value="动画" onclick="myMove()" />
+    </div>
+    <div style="float: left;width: 100%;font-size: 15px">
+        <input id="checkbox_sampling" type="checkbox" style="border-radius: 5px">重采样
+        <select id="select_method" style="display: none;font-size: 14px;border-radius: 5px;width: 90px">
+            <option value="standard_sampling">标准重采样</option>
+            <option value="average_sampling">均值重采样</option>
+        </select>
+        <div id="interval" style="display: none;width:40%;float:right">
+            采样间隔N:<input id="sampling_interval" style="width:20px;height:25px;border-radius: 5px;border:1px solid rgb(169, 169, 169)" >
+        </div>
+    </div>
+    <button class="btn btn-primary" data-toggle="modal" data-target="#pars_Modal">参数选择</button><br/>
+    <select id="sel_cen" style="font-size: 14px;border-radius: 5px;width: 120px;margin-left: 0px"onchange="gaibian2()">
+        <option value="时间变化曲线">时间变化曲线</option>
+        <option value="密度直方图">密度直方图</option>
+        <!--        <option value="时间变化曲线">时间变化曲线</option>-->
+    </select>
+    <select id="sel_type" style="font-size: 14px;border-radius: 5px;width: 120px;margin-left: 150px"onchange="gaibian()">
+        <option value="时间变化曲线">时间变化曲线</option>
+        <option value="密度直方图">密度直方图</option>
+<!--        <option value="时间变化曲线">时间变化曲线</option>-->
+    </select>
+    <div id="pars_div" style="font-size:14px;display: none;border:0;background-color:transparent;">
+        <div>输入参数：</div>
+        <textarea id="inputpars_value" type="text" value="" readonly="readonly" style="border:1px skyblue solid;background-color:transparent;overflow: hidden"></textarea><br/>
+        <div>输出参数：</div>
+        <textarea id="outputpar_value" type="text" value="" readonly="readonly" style="border:1px skyblue solid;background-color:transparent;overflow: hidden"></textarea><br/>
+<!--        <input id="outputpar_value" value="" disabled="disabled" style="border:0;background-color:transparent;">-->
+    </div>
+    <div id="container6" style="height: 550px;width: 499px;"></div>
+    <hr style="margin: 5px">
+    <button id="trainning" class="btn btn-primary" style="float: left;margin-right: 20px">CCA分析</button>
+    <button id="saving" class="btn btn-primary" style="float: left;margin-right: 50px">保存模型</button>
+<!--    <button id="open_model_file" class="btn btn-primary" style="float: left">控制器参数</button><br/>-->
+<!--    <div id="load_note" style="float:left;width: 200px;display: none;margin-left: 10px;padding-top: 6px">训练中...</div>-->
+    <!--<button id="save_modal" class="btn btn-primary" disabled="disabled" style="float: right;">保存模型</button>-->
+</div>
+<div id="container7" style="height: 200px;width: 450px;margin-left: 950px;margin-top: 0px;position: absolute"></div>
+<div id="container8" style="height: 450px;width: 450px;margin-left: 950px;margin-top: 180px;position: absolute"></div>
+<!--<div id="container9" style="height: 500px;width: 450px;margin-left: 1450px;margin-top: 920px;position: absolute"></div>-->
+<!--<input id="btnOperate" type="button" value="选择" onclick="tiaozhuan()" />-->
+<!--<input id="btnOperate2" type="button" value="动画" onclick="myMove()" />-->
+
+</body>
+<script>
+    var zhuangtai='高温过热器出口段横向';
+    var state=0;
+    var input_list=[];
+    var output_list=[];
+    var index_list=[];
+    var button_flag=true;
+    var button_flag2=true;
+    var checkbox_sampling_flag=0;
+    var xAxiss=[];
+    var chushi='时间变化曲线';
+    var hebing;
+    var num=0;
+    var check_state=0;
+    // document.getElementById("f").style.display="none";
+    $("#checkbox_sampling").click(function(){
+        if(checkbox_sampling_flag==0){
+            $('#select_method').show()
+            $('#interval').show()
+            checkbox_sampling_flag=1
+        }else{
+            $('#select_method').hide()
+            $('#interval').hide()
+            document.getElementById("sampling_interval").value=''
+            checkbox_sampling_flag=0
+        }
+    })
+    function gaibian2(){
+        chushi = $('#sel_cen  option:selected').val();
+        num= parseInt(chushi.replace(/[^0-9]/ig,""));
+        d=[];
+        l=[];
+        x_d=[];
+        num=num-1;
+        console.log(num)
+        console.log(hebing.length)
+        console.log(hebing)
+        k=0;
+        for (var i=0+num*6;i<num*6+6;i++){
+            console.log(i)
+            console.log(k)
+            d.push({
+                name: hebing[i],
+                x: 100,
+                y: 50+i*50,
+            });
+            x_d.push({
+                show:true,
+                type: 'category',
+                data:r_y_time ,
+                gridIndex:k
+            });
+            for (var j=i+1;j<hebing.length;j++){
+                console.log(r_y_n.indexOf(hebing[i]),r_y_n.indexOf(hebing[j]))
+                var yans=''
+                if(r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])]<0){
+                    yans='#0780cf'
+                }
+                else {
+                    yans='#765005'
+                }
+                l.push({
+                    source:hebing[i],
+                    target: hebing[j],
+                    value:r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])],
+                    lineStyle: {
+                        normal: {
+                            width : 10*r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])],//可信度越高，连线越粗
+                            color:yans
+                            // color : function (){
+                            //     if(r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])]<0){
+                            //         return 'blue'
+                            //     }
+                            //     else {
+                            //         return 'red'
+                            //     }
+                            // }
+                        }
+                    }
+                });
+            }
+            option8.xAxis[k].data=r_y_time;
+            console.log(r_y_d[r_y_n.indexOf(hebing[i])])
+            dd=r_y_d[r_y_n.indexOf(hebing[i])]
+            console.log(dd)
+            // bin1 = ecStat.histogram(dd);
+            // option8.series[i+1].data=bin1.data
+            // option8.series[i+1].type='bar';
+            xAxiss.push({
+                type: 'value',
+                scale: true,
+                gridIndex:k
+            })
+            // option8.xAxis[i].type='value';
+            // option8.xAxis[i].push({
+            //     max:function (value) {
+            //         return value.max ;
+            //     },
+            // })
+            // option8.xAxis[i].push({
+            //     min:function (value) {
+            //         return value.min ;
+            //     },
+            // })
+            option8.series[k+1].data=r_y_d[r_y_n.indexOf(hebing[i])]
+            k=k+1;
+        }
+        option8.series[0].data=d;
+        option8.series[0].links=l;
+        console.log(option8)
+        myChart6.setOption(option8,true);
+
+    }
+    function gaibian(){
+        chushi = $('#sel_type  option:selected').val();
+        xAxiss=[];
+        k=0
+        if(chushi=='时间变化曲线'){
+            for (var i=0+num*6;i<6+num*6&&i<hebing.length;i++){
+                option8.xAxis[k].data=r_y_time;
+                option8.series[k+1].data=r_y_d[r_y_n.indexOf(hebing[i])]
+                option8.series[k+1].type='line';
+                option8.xAxis[k].type='category';
+                k=k+1
+            }
+            myChart6.setOption(option8,true);
+        }
+        else {
+            for (var i=0+num*6;i<6+num*6;i++){
+                dd=r_y_d[r_y_n.indexOf(hebing[i])]
+                bin1 = ecStat.histogram(dd);
+                option8.series[k+1].data=bin1.data
+                option8.series[k+1].type='bar';
+                xAxiss.push({
+                    type: 'value',
+                    scale: true,
+                    gridIndex:k
+                })
+                k=k+1;
+            }
+            option8.xAxis=xAxiss;
+            myChart6.setOption(option8,true);
+        }
+    }
+    $("#submit_pars").click(function(){
+        // if(input_list.length==0||output_list.length==0){
+        if(output_list.length==0||input_list.length==0){
+            alert('请至少选择一个参数x和一个参数y！')
+            return;
+        }
+        output_list=[];
+        xAxiss=[];
+        for(var i=0;i<ronghe_xgx_col.length;i++){
+            console.log("1227class--->",document.getElementById('output_'+i).className)
+            if(document.getElementById('output_'+i).className=='checked_pars'){
+                output_list.push(document.getElementById('output_'+i).value)
+            }
+        }
+        input_list=[]
+        for(var i=0;i<inputt.length;i++){
+            console.log("1227class--->",document.getElementById('output_'+i).className)
+            if(document.getElementById('input_'+i).className=='checked_pars'){
+                input_list.push(document.getElementById('input_'+i).value)
+            }
+        }
+        // document.getElementById('outputpar_value').value=output_list
+        // document.getElementById('inputpars_value').value=input_list
+        // $('#pars_div').show()
+        $('#container6').show()
+        d=[];
+        l=[];
+        x_d=[];
+        hebing=input_list.concat(output_list)
+        for(var i=0;i<hebing.length;i++){
+            index_list.push(r_y_n.indexOf(hebing[i]))
+        }
+        for (var i=0;i<6;i++){
+            d.push({
+                name: hebing[i],
+                x: 100,
+                y: 50+i*50,
+            });
+            x_d.push({
+                show:true,
+                type: 'category',
+                data:r_y_time ,
+                gridIndex:i
+            });
+            for (var j=i+1;j<hebing.length;j++){
+                console.log(r_y_n.indexOf(hebing[i]),r_y_n.indexOf(hebing[j]))
+                var yans=''
+                if(r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])]<0){
+                    yans='#0780cf'
+                }
+                else {
+                    yans='#765005'
+                }
+                l.push({
+                    source:hebing[i],
+                    target: hebing[j],
+                    value:r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])],
+                    lineStyle: {
+                        normal: {
+                            width : 10*r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])],//可信度越高，连线越粗
+                            color:yans
+                            // color : function (){
+                            //     if(r_y_corr[r_y_n.indexOf(hebing[i])][r_y_n.indexOf(hebing[j])]<0){
+                            //         return 'blue'
+                            //     }
+                            //     else {
+                            //         return 'red'
+                            //     }
+                            // }
+                        }
+                    }
+                });
+            }
+            option8.xAxis[i].data=r_y_time;
+            console.log(r_y_d[r_y_n.indexOf(hebing[i])])
+            dd=r_y_d[r_y_n.indexOf(hebing[i])]
+            bin1 = ecStat.histogram(dd);
+            // option8.series[i+1].data=bin1.data
+            // option8.series[i+1].type='bar';
+            xAxiss.push({
+                type: 'value',
+                scale: true,
+                gridIndex:i
+            })
+            // option8.xAxis[i].type='value';
+            // option8.xAxis[i].push({
+            //     max:function (value) {
+            //         return value.max ;
+            //     },
+            // })
+            // option8.xAxis[i].push({
+            //     min:function (value) {
+            //         return value.min ;
+            //     },
+            // })
+            option8.series[i+1].data=r_y_d[r_y_n.indexOf(hebing[i])]
+        }
+        // for (var i=0;i<6;i++){
+        //     for (var j=i+1;j<hebing.length;j++){
+        //         l.push({
+        //             source:hebing[i],
+        //             target: hebing[j],
+        //             // lineStyle: {
+        //             //     normal: {
+        //             //         // width : 20,//可信度越高，连线越粗
+        //             //         color : 'source'
+        //             //     }
+        //             // }
+        //         });
+        //     }
+        // }
+        // option8.xAxis=xAxiss;
+        option8.series[0].data=d;
+        option8.series[0].links=l;
+        console.log(option8)
+        myChart6.setOption(option8,true);
+        var obj=document.getElementById('sel_cen');
+        obj.options.length=0;
+        n=Math.ceil(hebing.length/6);
+        for (var i = 0; i < n; i++)
+        {
+            obj.options.add(new Option('第'+(i+1)+'层','第'+(i+1)+'层'));
+        }
+    });
+    d3.select('#trainning').on("click", function () {
+        if (output_list.length==0||input_list.length==0) {
+            alert('请至少选择一个参数x和一个参数y！')
+            return;
+        }
+        // document.getElementById('trainning').disabled = 'disabled';
+        var jieshi;
+        var ydata=[];
+        var jy;
+        var leida_data=[];
+        var xishu_x,xishu_y;
+        var xishu_ser=[];
+        $.ajax({
+            type:"POST",
+            url:"CCA",
+            dataType:"json",
+            data: {"input": JSON.stringify(input_list),"output": JSON.stringify(output_list),"index": JSON.stringify(index_list)},
+            async: false,
+            success:function (data){
+                console.log(data);
+                jieshi=data['jieshi'];
+                jy=data['jy'];
+                xishu_x=data['a'];
+                xishu_y=data['b'];
+            }
+        });
+        for(var j=1;j<jieshi[0].length+1;j++){
+            ydata.push('第'+j+'组')
+        }
+        for(var i=0;i<jieshi.length;i++){
+            option9.series[i].data=jieshi[i]
+        }
+        for(var i=0;i<jy.length;i++){
+            leida_data.push({
+                    value: jy[i],
+                    name: '第'+(i+1)+'组'
+            })
+        }
+        for(var i=0;i<xishu_x.length;i++){
+            xishu_ser.push({
+                data: xishu_x[i],
+                type: 'line',
+                name: '第'+(i+1)+'组',
+                xAxisIndex:0,
+                yAxisIndex:0
+            })
+        }
+        for(var i=0;i<xishu_y.length;i++){
+            xishu_ser.push({
+                data: xishu_y[i],
+                type: 'line',
+                name: '第'+(i+1)+'组',
+                xAxisIndex:1,
+                yAxisIndex:1
+            })
+        }
+        xishu_ser.push({
+            type: 'radar',
+            data: leida_data
+        })
+        option9.yAxis[0].data=ydata;
+        option9.yAxis[1].data=ydata
+        option9.yAxis[2].data=ydata
+        console.log(option9)
+        myChart7.setOption(option9,true);
+        // option10.series[2].data=leida_data;
+        option10.series=xishu_ser;
+        option10.xAxis[0].data=input_list;
+        option10.xAxis[1].data=output_list;
+        myChart8.setOption(option10,true);
+    });
+    function output_pars(Name){
+        output_list=[]
+        var output=document.querySelectorAll(Name)
+        for(var i=0;i<ronghe_xgx_col.length;i++){
+            output[i].onclick=function(){
+                for(var j=0;j<output_list.length;j++){
+                    if(this.value==output_list[j]){
+                        button_flag=false
+                        break
+                    }
+                    button_flag=true
+                }
+                if(button_flag){
+                    this.className='checked_pars'
+                    output_list.push(this.value)
+                }else{
+                    this.className='output_pars'
+                    output_list.remove0(this.value)
+                }
+                button_flag=!button_flag
+                console.log("output_list",output_list)
+            }
+        }
+    }
+    Array.prototype.remove0 = function(val) {
+        var index = this.indexOf(val);
+        if (index > -1) {
+            this.splice(index, 1);
+        }
+    };
+    function select_pars(Name){
+        input_list=[]
+        var input_pars=document.querySelectorAll(Name)
+        for(var i=0;i<input_pars.length;i++){
+            input_pars[i].onclick=function(){
+                for(var j=0;j<inputt.length;j++){
+                    if(this.value==input_list[j]){
+                        button_flag2=false
+                        break
+                    }
+                    button_flag2=true
+                }
+                if(button_flag2){
+                    this.className='checked_pars'
+                    input_list.push(this.value)
+                }else{
+                    this.className='input_pars'
+                    input_list.remove0(this.value)
+                }
+                button_flag2=!button_flag2
+                console.log("input_list",input_list)
+            }
+        }
+    };
+    function static_num()
+    {
+        var vs = $('#sel  option:selected').val();
+        zhuangtai=vs;
+        // if(zhuangtai == '高温过热器出口段横向'){
+        //     location.href="{{ url_for('test_index2') }}";
+        // }
+        if(zhuangtai == '低温过热器下部屏出口段后墙横向'){
+            location.href="{{ url_for('tiaoindex2') }}";
+        }
+        if(zhuangtai == '低温过热器上部屏出口段后墙横向'){
+            location.href="{{ url_for('tiaoindex1') }}";
+        }
+        if(zhuangtai == '后墙隔墙出口段'){
+            location.href="{{ url_for('tiaoindex3') }}";
+        }
+        $.ajax({
+            type:"POST",
+            url:"cedian",
+            dataType:"json",
+            async: false,
+            data: {"choose_id": zhuangtai},
+            success:function (data){
+                // console.log(data);
+                // data1=data['data1'];
+                // data2=data['data2'];
+                // option['series'][0]["data"]=data['data2'];
+                option['series'][1]["data"]=data['data1'];
+                option["visualMap"]["max"]=data["max"];
+                option["visualMap"]["min"]=data["min"];
+                // option["visualMap"]["range"][0]=data["min"];
+                // option["visualMap"]["range"][1]=data["max"];
+                if(state==0){
+                    // option["visualMap"]["seriesIndex"]=[1]
+                    option["visualMap"]["dimension"]=[4]
+                }
+                else if (state==1){
+                    // option["visualMap"]["seriesIndex"]=[2]
+                    // option["title"]["text"]='聚类空间分布'
+                    option["visualMap"]["dimension"]=[5]
+                }
+                dmin=data["min"];
+                dmid=data["min"];
+                dmax=data["max"];
+                // option4['series'][0]["data"]=data['xgx'];
+                leibie=data['lei']
+                // option4['series'][0]["data"]=data['data2'];
+                // option4['series'][1]["data"]=data['data1'];
+                // option4["visualMap"]["max"]=data["max"];
+                // option4["visualMap"]["min"]=data["min"];
+                // option4["visualMap"]["range"][0]=data["min"];
+                // option4["visualMap"]["range"][1]=data["max"];
+            }
+        });
+        $.ajax({
+            type:"POST",
+            url:"yinzi",
+            dataType:"json",
+            async: false,
+            data: {"choose_id": zhuangtai},
+            success:function (data){
+                // console.log(data);
+                option3.series[0].data=data['data1'];
+                option3['series'][1]["data"]  = data['erced'];
+                myChart3.setOption(option3);
+            }
+        });
+        if(state==0){
+            // option["visualMap"]["seriesIndex"]=[1]
+            option["visualMap"]["dimension"]=[4]
+            option.visualMap={
+                type:'continuous',
+                    itemWidth:15,
+                    itemHeight:60,
+                    dimension: 4,
+                    min:570,
+                    max:614,
+                    inRange: {
+                    color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                },
+                // range:[570,614],
+                calculable: true,
+                    realtime: true,
+                    seriesIndex: [1],
+            }
+        }
+        else if (state==1){
+            option.visualMap={
+                type:'piecewise',
+                categories: ['0', '1', '2', '3'],
+                itemWidth:15,
+                itemHeight:20,
+                dimension: 5,
+                min:0,
+                max:3,
+                inRange: {
+                color: ['#0780cf', '#b6b51f', '#fa6d1d','#0e2c82']
+                },
+                // range:[570,614],
+                calculable: true,
+                    realtime: true,
+                    seriesIndex: [1],
+        }
+            // option.visualMap.type='piecewise';
+            // option["visualMap"]["max"]=3;
+            // option["visualMap"]["min"]=0;
+            // option["visualMap"]['color']=['#0780cf', '#765005', '#fa6d1d']
+            // // option["visualMap"]["seriesIndex"]=[2]
+            // // option["title"]["text"]='聚类空间分布'
+            // option["visualMap"]["dimension"]=[5]
+        }
+        jishu=0;
+        // dmin=data["min"];
+        // dmid=data["min"];
+        // dmax=data["max"];
+        myChart.setOption(option);
+        // option4['series'][0]["data"]=data['xgx'];
+        // myChart4.setOption(option4);
+        //     }
+        // });
+    };
+    function tiaozhuan()
+    {
+        $.ajax({
+            type:"POST",
+            url:"huanchun",
+            dataType:"json",
+            data: {"choose_id": JSON.stringify(listt)},
+            async: false,
+            success:function (data){
+                // console.log(data);
+            }
+        });
+
+    };
+    document.getElementById("yuy").style.display="block";
+    $(document).ready(function() {
+        $("#onoffswitch").on('click', function(){
+            clickSwitch()
+        });
+        $("#onoffswitch2").on('click', function(){
+            clickSwitch2()
+        });
+        $("#onoffswitch3").on('click', function(){
+            clickSwitch3()
+        });
+
+        var clickSwitch = function() {
+            if ($("#onoffswitch").is(':checked')) {
+                // console.log("在ON的状态下");
+                state=1;
+                check_state=1;
+                option.visualMap={
+                    type:'piecewise',
+                    categories: ['0', '1', '2', '3'],
+                    itemWidth:15,
+                    itemHeight:20,
+                    dimension: 5,
+                    min:0,
+                    max:3,
+                    inRange: {
+                        color: ['#0780cf', '#b6b51f', '#fa6d1d','#0e2c82']
+                    },
+                    // range:[570,614],
+                    calculable: true,
+                    realtime: true,
+                    seriesIndex: [1],
+                };
+                myChart.setOption(option);
+            } else {
+                // console.log("在OFF的状态下");
+                state=0;
+                check_state=0;
+                option["visualMap"]["dimension"]=[4]
+                option.visualMap={
+                    type:'continuous',
+                    itemWidth:15,
+                    itemHeight:60,
+                    dimension: 4,
+                    min:570,
+                    max:614,
+                    inRange: {
+                        color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                    },
+                    // range:[570,614],
+                    calculable: true,
+                    realtime: true,
+                    seriesIndex: [1],
+                };
+                myChart.setOption(option);
+            }
+        };
+        var clickSwitch2 = function() {
+            document.getElementById("yuy").style.display="block";
+            if ($("#onoffswitch2").is(':checked')) {
+                document.getElementById("container3").style.display="block";
+                $.ajax({
+                    type:"POST",
+                    url:"yinzi",
+                    dataType:"json",
+                    async: false,
+                    data: {"choose_id": zhuangtai},
+                    success:function (data){
+                        // console.log(data);
+                        option3.series[0].data=data['data1'];
+                        option3['series'][1]["data"]  = data['erced'];
+                        myChart3.setOption(option3);
+                    }
+                });
+            } else {
+                document.getElementById("container3").style.display="none";
+                document.getElementById("yuy").style.display="none";
+                // document.getElementById("onoffswitch2")
+            }
+        };
+        var clickSwitch3 = function() {
+            if ($("#onoffswitch3").is(':checked')) {
+                option3.parallel.axisExpandable=true;
+                myChart3.setOption(option3);
+            } else {
+                option3.parallel.axisExpandable=false;
+                myChart3.setOption(option3);
+            }
+        };
+
+    });
+    var dom = document.getElementById("container");
+    var myChart = echarts.init(dom, null, {renderer: 'canvas'});
+    var dom2 = document.getElementById("container2");
+    var myChart2 = echarts.init(dom2, null, {renderer: 'svg'});
+    var dom3 = document.getElementById("container3");
+    var myChart3 = echarts.init(dom3, null, {renderer: 'svg'});
+    var dom4 = document.getElementById("container4");
+    var myChart4 = echarts.init(dom4, null, {renderer: 'svg'});
+    var dom5 = document.getElementById("container5");
+    var myChart5 = echarts.init(dom5, null, {renderer: 'svg'});
+    var dom6 = document.getElementById("container6");
+    var myChart6 = echarts.init(dom6, null, {renderer: 'svg'});
+    var dom7 = document.getElementById("container7");
+    var myChart7 = echarts.init(dom7, null, {renderer: 'svg'});
+    var dom8 = document.getElementById("container8");
+    var myChart8 = echarts.init(dom8, null, {renderer: 'svg'});
+    var dom9= document.getElementById("container9");
+    var myChart9 = echarts.init(dom9, null, {renderer: 'svg'});
+    // var dom9 = document.getElementById("container9");
+    // var myChart9 = echarts.init(dom9, null, {renderer: 'svg'});
+    var optionkuang;
+    var data1,data2;
+    var dmin;
+    var dmax;
+    var dmid;
+    var indexKuang;
+    // 获取range框内的数值 并传递给后台 进行处理
+    function change() {
+        var valuerange = document.getElementById('range').value ;
+        document.getElementById('value').innerHTML = valuerange;
+        console.log(valuerange)
+        if(check_state==1) {
+            $.ajax({
+                type: "POST",
+                url: "xuanqu2",
+                dataType: "json",
+                async: false,
+                data: {"index": JSON.stringify(indexKuang), "valuerange": valuerange, "choose_id": zhuangtai},    // 传递列表
+                success: function (data) {
+                    console.log(data)
+                    //画选取的点的图
+                    optionkuang = {
+                        xAxis: [{
+                            type: 'category',
+                            data: data['time'],
+                            gridIndex: 0
+                        }],
+                        dataZoom:[
+                            {
+                                type:'inside',  //使鼠标在图表中时滚轮可用
+                                xAxisIndex:[0]
+                            }
+                        ],
+                        grid: {
+                            top: 0,
+                            height: 350,
+                            width: '100%'
+                        },
+                        yAxis: [{
+                            type: 'value',
+                            gridIndex: 0
+                        }],
+                        series: [{
+                            data: data['datajunfen'],
+                            type: 'line',
+                            xAxisIndex:0,
+                            yAxisIndex:0
+                        }]
+                    };
+                    myChart9.setOption(optionkuang)
+                }
+            });
+        }
+    };
+
+
+    // 获取二维坐标下拉选框的 index 信息 并传递给后台
+    myChart3.on('brushSelected', function (params) {
+
+        console.log('brushSelected',params)
+        console.log('me',params.batch[0].selected[0].dataIndex)
+        indexKuang = params.batch[0].selected[0].dataIndex
+        console.log(indexKuang)
+        if(check_state==1) {
+            $.ajax({
+                type: "POST",
+                url: "xuanqu",
+                dataType: "json",
+                async: false,
+                data: {"index": JSON.stringify(indexKuang), "choose_id": zhuangtai},    // 传递列表
+                success: function (data) {
+                    console.log(data)
+                    // 画选取的点的图
+                    optionkuang = {
+                        xAxis: {
+                            type: 'category',
+                            data: data['time']
+                        },
+                        yAxis: {
+                            type: 'value'
+                        },
+                        series: [{
+                            data: data['datajun'],
+                            type: 'line'
+                        }]
+                    };
+                    myChart9.setOption(optionkuang)
+                }
+            });
+            $('#ccy').show()
+        }
+    });
+    function myMove()
+    {
+        var id = setInterval(frame, 300);
+        function frame() {
+            if (dmid >= dmax) {
+                clearInterval(id);
+                dmid=dmin;
+            } else {
+                dmid++;
+                $("#onoffswitch").prop("checked",false);
+                // console.log(option['visualMap']['range'])
+                option['visualMap']['range'][1]=dmid+1;
+                option["visualMap"]["seriesIndex"]=[1];
+                myChart.setOption(option)
+            }
+        }
+    }
+
+    var leibie=[];
+    function fanhui(){
+        let colorList = [
+            "#163EC0",
+            "#CBA531",
+            '#d94e5d',
+            '#244c50'
+        ];
+        jishu=jishu+1;
+        // console.log(colorList[leibie[jishu-1]])
+        return colorList[leibie[jishu-1]];
+    }
+    // $.ajax({
+    //     type:"POST",
+    //     url:"cedian",
+    //     dataType:"json",
+    //     async: false,
+    //     data: {"choose_id": zhuangtai},
+    //     success:function (data){
+    //         leibie=data['lei']
+    //     }
+    // });
+    // console.log(leibie)
+    var jishu=0;
+    var listt=[];
+    var option = {
+        title:{
+            text:'',
+            subtext:'',
+            left:'center'
+        },
+        // grid3D: {
+        //     left: '3%',
+        //     right: '4%',
+        //     bottom: '12%',
+        //     top:'15%',
+        // },
+        xAxis3D: {
+            name:"row",
+            type: 'value',
+            max: function (value) {
+                return value.max ;
+            },
+            min: 0,
+            // interval:6,
+            axisPointer:{
+                show:false
+            },
+        },
+        yAxis3D: {
+            type: 'value',
+            max:8,
+            min:1,
+            interval:1,
+            axisPointer:{
+                show:false
+            }
+        },
+        zAxis3D: {
+            name:"column",
+            type: 'value',
+            // max:20,
+            // min:1,
+            // interval:5,
+            max: function (value) {
+                return value.max+5 ;
+            },
+            min: 0,
+            axisPointer:{
+                show:false
+            }
+        },
+        grid3D:{
+            left:'10%',
+            height:'100%'
+        },
+        visualMap: {
+            type:'continuous',
+            itemWidth:15,
+            itemHeight:60,
+            dimension: 4,
+            min:570,
+            max:614,
+            inRange: {
+                color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+            },
+            // range:[570,614],
+            calculable: true,
+            realtime: true,
+            seriesIndex: [1],
+        },
+        tooltip: {
+            // trigger: 'axis',
+            show:true,
+            axisPointer:{
+                type:'none'
+            },
+            formatter: function (params) {
+                // console.log(params);
+                if (params.componentSubType=='scatter3D') {
+                    return params.data[3]
+                }
+                else{
+                    return ''
+                }
+            },
+        },
+        series: [
+            {
+                type: 'bar3D',
+                barSize:10,
+                symbolSize: 25,
+                data:data2,
+                silent:true,
+                label:{
+                    show:false
+                },
+                z:-10,
+
+            },
+            {
+                type: 'scatter3D',
+                symbolSize: 20,
+                visualMap:false,
+                symbol:'rect',
+                // symbol:function (params) {
+                //     let colorList = [
+                //         'circle',
+                //         'rect',
+                //         'triangle',
+                //         'roundRect'
+                //     ];
+                //     // console.log('leibie',colorList[leibie[jishu-1]]);
+                //     // jishu=jishu+1
+                //     if(jishu==1){
+                //         jishu=jishu-1
+                //         console.log(colorList[jishu+1])
+                //         return colorList[jishu+1];
+                //     }
+                //     else if(jishu==0){
+                //         jishu=jishu+1
+                //         console.log(colorList[jishu-1])
+                //         return colorList[jishu-1];
+                //     }
+                //     // return colorList[jishu];
+                //     // return colorList[params.data[0]];
+                // },
+                color:'#FFD700',
+                data:data1,
+                z:100,
+                label: {
+                    show: false
+                },
+                emphasis: {
+                    label: {
+                        fontSize: 15,
+                    },
+                    itemStyle: {
+                        color: '#fff'
+                    }
+                },
+                itemStyle: {
+                    color: function (params) {
+                        return fanhui();
+                        // let colorList = [
+                        //     "#163EC0",
+                        //     "#CBA531",
+                        // ];
+                        // jishu=jishu+1;
+                        // console.log(colorList[leibie[jishu-1]])
+                        // return colorList[leibie[jishu-1]];
+                    },
+                },
+            },
+        ]
+    };
+    var option2={
+        title:{
+            text:"",
+        },
+        tooltip:{
+            trigger:'axis'
+        },
+        legend:{
+            data:[],
+            top:0
+        },
+        grid:{
+            left: '3%',
+            right: '4%',
+            bottom: '12%',
+            top:'15%',
+            containLabel: true
+        },
+        xAxis:{
+            splitNumber:3,
+            type:'category',
+            data:[]
+        },
+        yAxis:{
+            type:'value',
+            max: function (value) {
+                return parseInt(value.max + 20);
+            },
+            min: function (value) {
+                return parseInt(value.min - 20);
+            }
+        },
+        dataZoom: [
+            {
+                type: 'slider',//数据滑块
+                show:true,
+                xAxisIndex:[0],//表示x轴折叠
+                start:0,
+                end:35,
+                //minSpan:2,    //5min
+                // minSpan:16,   //10min
+                // minSpan:24,   //15min
+                // minSpan:50,   //30min
+                dataBackground:{
+                    lineStyle:{
+                        color:'#95BC2F'
+                    },
+                    areaStyle:{
+                        color:'#95BC2F',
+                        opacity:1,
+                    }
+                },
+                fillerColor:'rgba(255,255,255,.6)'
+            },
+            {
+                type:'inside'//使鼠标在图表中时滚轮可用
+            }
+        ],
+        series:[]
+    };
+    var option3 = {
+        parallelAxis: [
+            // {
+            //     dim: 0,
+            //     name: '测点',
+            //     type: 'category',
+            //     axisLabel:{
+            //         show:true,
+            //         inside:true
+            //     }
+            // },
+            {dim: 0, name: 'factor1'},
+            {dim: 1, name: 'factor2'},
+            {dim: 2, name: 'factor3'},
+            {
+                dim: 3,
+                name: 'Measuring point',
+                type: 'category',
+                axisLabel:{
+                    show:false,
+                    // inside:true
+                }
+            },
+        ],
+        brush: {
+            toolbox:['rect', 'polygon', 'keep', 'clear'],
+            brushLink: 'all',
+            xAxisIndex: [0],
+            yAxisIndex: [0],
+            inBrush: {
+                colorAlpha: 1,
+                opacity:1
+            },
+            brushStyle:{
+                borderWidth: 1,
+                color: 'rgba(120,140,180,0.3)',
+                borderColor: 'rgba(120,140,180,0.8)'
+            },
+            outOfBrush: {
+                colorAlpha: 0.1,
+                opacity:0.1
+            }
+        },
+        grid:{
+            top: '8%',
+            left: 'center',
+            // right: '5%',
+            height: '30%',
+            width: '80%',
+        },
+        yAxis:{
+            splitNumber: 3,
+            // position: 'right',
+            type: 'value',
+            gridIndex: 0,
+            scale: true
+        },
+        xAxis:{
+            max:65,
+            min:0,
+            splitNumber: 3,
+            // position: 'top',
+            type: 'value',
+            gridIndex: 0,
+            scale: true
+        },
+        parallel:{
+            bottom: '3%',
+            left: '5%',
+            right: '5%',
+            height: '47%',
+            width: '90%',
+            axisExpandCount: 3,
+            axisExpandWidth: 1000,
+            axisExpandTriggerOn: "mousemove",
+            axisExpandCenter: 1,
+            axisExpandable: false
+        },
+        tooltip: {
+            formatter: function(param) {
+                console.log("s",param)
+                if (param.componentIndex==3){
+                    // var value = param.value;
+                    return [
+                        // '类别名称: ' + param.seriesName,
+                        'Factor1_score: ' + param.data[0].toFixed(4),
+                        'Factor2_score: ' + param.data[1].toFixed(4),
+                        'Factor3_score: ' + param.data[2].toFixed(4),
+                    ].join('<br/>')
+                    // return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 16px;padding-bottom: 7px;margin-bottom: 7px;"> ' + value[2] +
+                    //     '</div>';
+                }
+                else if (param.componentIndex==1){
+                    // var value = param.value;
+                    return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 16px;padding-bottom: 7px;margin-bottom: 7px;"> ' + param.data[2] +
+                        '</div>';
+                }
+                // var value = param.value;
+                // return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 16px;padding-bottom: 7px;margin-bottom: 7px;"> ' + value[2] +
+                //     '</div>';
+            }
+        },
+        visualMap: {
+            show: false,
+            min: -0.009,
+            max: 0.012,
+            dimension: 0,
+            inRange: {
+                color: ['#00a8e1','#99cc00','#e30039','#fcd300'].reverse(),
+                // colorAlpha: [0, 1]
+            },
+            seriesIndex:[0]
+        },
+
+        series: [{
+            type: 'parallel',
+            smooth: true,
+            lineStyle: {
+                width: 4
+            },
+            data: [],
+            label:{
+                show:false
+            }
+            // blendMode: 'lighter',
+        },
+        {
+            type: 'scatter',
+            symbolSize: 10,
+            xAxisIndex: 0,
+            yAxisIndex: 0,
+            data: [],
+            itemStyle:{
+                // color:'red',
+                normal : {
+                    color: function(params) {
+                        // console.log("option3",params)
+                        // build a color map as your need.
+                        var colorList = [
+                            '#C1232B','#B5C334','#FCCE10','#E87C25','#27727B',
+                            '#FE8463','#9BCA63','#FAD860','#F3A43B','#60C0DD',
+                            '#D7504B','#C6E579','#F4E001','#F0805A','#26C0C0'
+                        ];
+                        return colorList[1]
+                    }
+                }
+            }
+        }
+        ]
+    };
+
+    // Generate data.
+    function makeData() {
+        var data = [];
+        for (var i = 0; i < 18; i++) {
+            var cate = [];
+            for (var j = 0; j < 100; j++) {
+                cate.push(Math.random() * 200);
+            }
+            data.push(cate);
+        }
+        return data;
+    }
+    var data0 = makeData();
+    var data1 = makeData();
+    var data2 = makeData();
+    // console.log(data0)
+
+    var option4 = {
+        // title: {
+        //     text: 'Multiple Categories',
+        //     left: 'center'
+        // },
+        dataset: [{
+            source: data0
+        }, {
+            source: data1
+        }, {
+            source: data2
+        }, {
+            fromDatasetIndex: 0,
+            transform: { type: 'boxplot' }
+        }, {
+            fromDatasetIndex: 1,
+            transform: { type: 'boxplot' }
+        }, {
+            fromDatasetIndex: 2,
+            transform: { type: 'boxplot' }
+        }],
+        legend: {
+            top: '10%'
+        },
+        tooltip: {
+            trigger: 'item',
+            axisPointer: {
+                type: 'shadow'
+            }
+        },
+        grid: {
+            left: '10%',
+            top: '20%',
+            right: '10%',
+            bottom: '15%'
+        },
+        xAxis: {
+            type: 'category',
+            boundaryGap: true,
+            nameGap: 30,
+            splitArea: {
+                show: true
+            },
+            splitLine: {
+                show: false
+            }
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Value',
+            min: -400,
+            max: 600,
+            splitArea: {
+                show: false
+            }
+        },
+        dataZoom: [{
+            type: 'inside',
+            start: 0,
+            end: 20
+        }, {
+            show: true,
+            type: 'slider',
+            top: '90%',
+            xAxisIndex: [0],
+            start: 0,
+            end: 20
+        }],
+        series: [{
+            name: 'category0',
+            type: 'boxplot',
+            datasetIndex: 3,
+            tooltip: {formatter: formatter}
+        }, {
+            name: 'category1',
+            type: 'boxplot',
+            datasetIndex: 4,
+            tooltip: {formatter: formatter}
+        }, {
+            name: 'category2',
+            type: 'boxplot',
+            datasetIndex: 5,
+            tooltip: {formatter: formatter}
+        },
+        ]
+    };
+    var option5 = {
+        // title: [
+        //     {
+        //         text: '',
+        //     },
+        //     {
+        //         text: 'upper: Q3 + 1.5 * IQR \nlower: Q1 - 1.5 * IQR',
+        //         borderColor: '#999',
+        //         borderWidth: 1,
+        //         textStyle: {
+        //             fontWeight: 'normal',
+        //             fontSize: 14,
+        //             lineHeight: 20
+        //         },
+        //         left: 'center',
+        //         top: '0%'
+        //     }
+        // ],
+        dataset: [{
+            source: [
+                [850, 740, 900, 1070,10, 930, 850, 950, 980, 980, 880, 1000, 980, 930, 650, 760, 810, 1000, 1000, 960, 960],
+                [960, 940, 960, 940, 880, 800, 850, 880, 900, 840, 830, 790, 810, 880, 880, 830, 800, 790, 760, 800],
+                [880, 880, 880, 860, 720, 720, 620, 860, 970, 950, 880, 910, 850, 870, 840, 840, 850, 840, 840, 840],
+                [890, 810, 810, 820, 800, 770, 760, 740, 750, 760, 910, 920, 890, 860, 880, 720, 840, 850, 850, 780],
+                [890, 840, 780, 810, 760, 810, 790, 810, 820, 850, 870, 870, 810, 740, 810, 940, 950, 800, 810, 870]
+            ]
+        }, {
+            transform: {
+                type: 'boxplot',
+                // config: { itemNameFormatter: 'expr {value}' }
+            }
+        }, {
+            fromDatasetIndex: 1,
+            fromTransformResult: 1
+        }],
+        tooltip: {
+            trigger: 'item',
+            axisPointer: {
+                type: 'shadow'
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '10%',
+            bottom: '15%'
+        },
+        xAxis: [
+            {
+                type: 'category',
+                boundaryGap: true,
+                nameGap: 30,
+                splitArea: {
+                    show: false
+                },
+                splitLine: {
+                    show: false
+                },
+                data: [],
+                show:true
+            },
+            {
+            type: 'category',
+            boundaryGap: true,
+            nameGap: 30,
+            splitArea: {
+                show: false
+            },
+            splitLine: {
+                show: false
+            },
+            show:false
+        }],
+        legend:{
+            data:['boxplot','outlier']
+        },
+        dataZoom: [
+            {
+                type: 'inside',
+                start: 0,
+                end: 5
+            },
+            {
+                show: true,
+                type: 'slider',
+                top: '90%',
+                start: 0,
+                end: 5
+            }
+        ],
+        yAxis: {
+            type: 'value',
+            // name: 'Wall temperature',
+            splitArea: {
+                show: true
+            },
+            max: function (value) {
+                return parseInt(value.max + 20);
+            },
+            min: function (value) {
+                return parseInt(value.min - 20);
+            }
+        },
+        series: [
+            {
+                name: 'boxplot',
+                type: 'boxplot',
+                datasetIndex: 1,
+                tooltip: {formatter: formatter},
+                xAxisIndex:1
+            },
+            {
+                name: 'outlier',
+                type: 'scatter',
+                datasetIndex: 2,
+                tooltip: {formatter: formatter2},
+                xAxisIndex:1,
+                itemStyle:{
+                    color:'#3b6291'
+                }
+            },
+        ]
+    };
+    var data5 = [];
+    var labelData5 = [];
+    for (var i = 0; i < 60; ++i) {
+        // if(i>3){
+
+        data5.push({
+            value: Math.random() * 10 ,
+            name: i + ':00'
+        });
+        labelData5.push({
+            value: 1,
+            name: i + ':00'
+        });
+    }
+    colorlist=['#63b2ee', '#76da91', '#f8cb7f', '#f89588','#7cd6cf','#9192ab','#7898e1','#efa666']
+    var option7 = {
+        // title: {
+        //     text: '分析',
+        //     left: '50%',
+        //     textAlign: 'center',
+        //     top: '0%'
+        // },
+        tooltip:{
+            show:true,
+            formatter:function(param){
+                // console.log(param)
+                return [
+                    // '类别名称: ' + param.seriesName,
+                    '参数1: ' + param.data.name1,
+                    '参数2: ' + param.data.name,
+                    '相关性: ' + param.data.value.toFixed(2),
+                ].join('<br/>')
+                // if(param.componentIndex==0){
+                //     return param.data.name+': '+(param.data.value.toFixed(2)).toString()
+                // }
+                // console.log(param)
+            }
+        },
+        // color: ['#63b2ee', '#76da91', '#f8cb7f', '#f89588','#7cd6cf','#9192ab','#7898e1','#efa666'],
+        series: [{
+            type: 'pie',
+            data: data5,
+            roseType: 'radius',
+            radius: '60%',
+            right:'10%',
+            top:'10%',
+            itemStyle: {
+                normal: {
+                    // color: 'white',
+                    color:function (param){
+                        if(param.data.name.indexOf('负相关')!=-1){
+                            return '#0082fc';
+                        }
+                        else{
+                            return 'white';
+                        }
+                    },
+                    borderColor: '#ffc076'
+                },
+                // emphasis: {
+                //     itemStyle: {
+                //         shadowBlur: 10,
+                //         shadowOffsetX: 0,
+                //         shadowColor: 'rgba(0, 0, 0, 0.5)'
+                //     }
+                // }
+                emphasis: {
+                    borderColor: '#333',
+                    borderWidth: 3
+                },
+            },
+            labelLine: {
+                normal: {
+                    show: false
+                }
+            },
+            label: {
+                normal: {
+                    show: false
+                }
+            },
+            // emphasis: {
+            //     borderColor: '#333',
+            //     borderWidth: 1
+            // },
+            // tooltip:{
+            //     show:true,
+            //     formatter:function(param){
+            //         console.log(param)
+            //     }
+            // }
+        },
+        {
+            type: 'pie',
+            data: labelData5,
+            radius: ['65%', '100%'],
+            zlevel: -2,
+            right:'10%',
+            top:'10%',
+            roseType: 'radius',
+            itemStyle: {
+                normal: {
+                    // color: '#22C3AA',
+                    color:function (param){
+                        for(var i=1;i<9;i++)
+                        {
+                            var s='#'+i+'管';
+                            if(param.data.name.indexOf(s)!=-1){
+                                return colorlist[i-1];
+                            }
+                        }
+                        // if(param.data.value<=0){
+                        //     return '#0082fc';
+                        // }
+                        // else{
+                        //     return '#22C3AA';
+                        // }
+                    },
+                    borderColor: 'white',
+                    // color: 'white'
+                },
+                emphasis: {
+                    borderColor: '#333',
+                    borderWidth: 3
+                },
+            },
+            label: {
+                normal: {
+                    show:false,
+                    fontSize:5,
+                    // show:true,
+                    position: 'inside'
+                }
+            }
+        }
+        ]
+    };
+    myChart5.setOption(option7);
+
+    function formatter(param) {
+        return [
+            // '类别名称: ' + param.seriesName,
+            '上边界: ' + param.data[5].toFixed(2),
+            '上四分位数: ' + param.data[4].toFixed(2),
+            '中位数: ' + param.data[3].toFixed(2),
+            '下四分位数: ' + param.data[2].toFixed(2),
+            '下边界: ' + param.data[1].toFixed(2)
+        ].join('<br/>')
+    }
+    function formatter2(param) {
+        // console.log("yica",param)
+        return [
+            // '类别名称: ' + param.seriesName,
+            '异常点: ' + param.data[1].toFixed(2),
+        ].join('<br/>')
+    }
+    var biwen_data;
+    var biwen_col;
+    var ronghe_xgx;
+    var ronghe_xgx_col;
+    var zb_d;
+    var zb_nx;
+    var zb_ny;
+    var all_name;
+    var all_xgx;
+    var r_y_d,r_y_n,r_y_corr,r_y_time;
+    $.ajax({
+        type:"POST",
+        url:"cedian",
+        dataType:"json",
+        async: false,
+        data: {"choose_id": zhuangtai},
+        success:function (data){
+            console.log(data);
+            // data1=data['data1'];
+            // data2=data['data2'];
+            // option['series'][0]["data"]=data['data2'];
+            option['series'][1]["data"]=data['data1'];
+            option["visualMap"]["max"]=data["max"];
+            option["visualMap"]["min"]=data["min"];
+            option5.dataset[0].source=data['data3'];
+            biwen_data=data['data3'];
+            biwen_col=data['biwen_col'];
+            option5.xAxis[0].data=data['time'];
+            ronghe_xgx=data['xgx'];
+            ronghe_xgx_col=data['xgx_col']
+            zb_d=data['zb_d'];
+            zb_ny=data['xgx_col'];
+            zb_nx=data['zb_nx']
+            all_name=biwen_col.concat(zb_ny);
+            // console.log(all_name)
+            all_xgx=data['all_xgx'];
+            // console.log("s",option5);
+            // option["visualMap"]["range"][0]=data["min"];
+            // option["visualMap"]["range"][1]=data["max"];
+            if(state==0){
+                // option["visualMap"]["seriesIndex"]=[1]
+                option["visualMap"]["dimension"]=[4]
+            }
+            else if (state==1){
+                // option["visualMap"]["seriesIndex"]=[2]
+                // option["title"]["text"]='聚类空间分布'
+                option["visualMap"]["dimension"]=[5]
+            }
+            dmin=data["min"];
+            dmid=data["min"];
+            dmax=data["max"];
+            // option4['series'][0]["data"]=data['xgx'];
+            leibie=data['lei'];
+            r_y_d=data['yx_data'];
+            r_y_n=data['yx_name'];
+            r_y_corr=data['yx_corr'];
+            r_y_time=data['time'];
+            // option4['series'][0]["data"]=data['data2'];
+            // option4['series'][1]["data"]=data['data1'];
+            // option4["visualMap"]["max"]=data["max"];
+            // option4["visualMap"]["min"]=data["min"];
+            // option4["visualMap"]["range"][0]=data["min"];
+            // option4["visualMap"]["range"][1]=data["max"];
+        }
+    });
+    console.log(ronghe_xgx_col)
+    for(var i=0;i<ronghe_xgx_col.length;i++)
+    {
+        // $("#input_pars").append("<button class='input_pars' style='margin-right: 5px' id='input_"+ i+"' value='"+columnsName[i]+"'>"+ columnsName[i]+"</button>")
+        $("#output_par").append("<button class='output_pars' style='margin-right: 5px' id='output_"+ i+"' value='"+ronghe_xgx_col[i]+"'>"+ ronghe_xgx_col[i]+"</button>")
+    };
+    output_pars('.output_pars')
+    var inputt=['低过上后聚类融合1','低过上后聚类融合2','低过上后公因子','低过下后聚类融合1','低过下后聚类融合2','低过上后公因子','高过聚类融合1','高过聚类融合2','高过聚类融合3','高过聚类融合4','高温过热器公因子1','高温过热器公因子2','高温过热器公因子3','后墙隔墙聚类融合1','后墙隔墙聚类融合2','后墙隔墙聚类融合3','后墙隔墙公因子1','后墙隔墙公因子2']
+    for(var i=0;i<inputt.length;i++)
+    {
+        // $("#input_pars").append("<button class='input_pars' style='margin-right: 5px' id='input_"+ i+"' value='"+columnsName[i]+"'>"+ columnsName[i]+"</button>")
+        $("#input_pars").append("<button class='input_pars' style='margin-right: 5px' id='input_"+ i+"' value='"+inputt[i]+"'>"+ inputt[i]+"</button>")
+    };
+    select_pars('.input_pars')
+    $.ajax({
+        type:"POST",
+        url:"yinzi",
+        dataType:"json",
+        async: false,
+        data: {"choose_id": zhuangtai},
+        success:function (data){
+            console.log("myChart3",data);
+            option3.series[0].data=data['data1'];
+            option3['series'][1]["data"]  = data['erced'];
+            myChart3.setOption(option3);
+        }
+    });
+    var data = []
+    var oneDay = 24 * 3600 * 1000;
+    var fiveMinutes = 1800 * 1000;
+    var count = oneDay / fiveMinutes;
+    var timestr = '2019/6/1 00:00:00';
+    var xindex=[];
+    var vxindex=[];
+    for(var i=0;i<=ronghe_xgx.length;i++){
+        if(i<ronghe_xgx.length){
+            vxindex.push(i)
+        }
+        xindex.push(i)
+    }
+    // var startTime = +new Date(timestr) - fiveMinutes
+    for(var j=0;j<ronghe_xgx.length;j++){
+        var data2=[]
+        var startTime = +new Date(timestr) - fiveMinutes
+        for (var i = 0; i <= ronghe_xgx[0].length; i++) {
+            startTime = new Date(+startTime + fiveMinutes)
+            index2=i;
+            index=j;
+            data2.push(randomData(startTime,index,index2))
+        }
+        data.push(data2)
+    }
+    console.log("data",data)
+    function randomData(now,index,index2) {
+        var value = Math.floor(Math.random() * 10)
+        if(index==ronghe_xgx[0].length){
+            index=index-1
+        }
+        return {
+            name: now.toString(),
+            value: [now.toLocaleDateString() + ' ' + now.getHours() + now.toLocaleTimeString().substr(-6, 6), ronghe_xgx[index][index2],ronghe_xgx_col[index2],'融合类别'+index]
+        }
+    }
+    function renderItem(params, api) {
+        // console.log(params.seriesIndex)
+        var xStart = api.value(0)
+        var xEnd = api.value(0)
+        if (params.dataIndex + 1 !== data[0].length) {
+            // console.log(params.dataIndex)
+            // console.log(data[params.seriesIndex][params.dataIndex + 1])
+            xEnd = new Date(data[params.seriesIndex][params.dataIndex + 1].value[0]).getTime()
+        }
+        var scaleStart = api.coord([xStart, 0])
+        var scaleSize = api.size([xEnd - xStart, 10])
+
+        return {
+            type: 'rect',
+            shape: {
+                x: scaleStart[0],
+                y: scaleStart[1],
+                width: scaleSize[0],
+                height: scaleSize[1]
+            },
+            style: api.style({
+                fill: api.visual('color')
+            })
+        }
+    }
+    var parallel = [];
+    function redata(indexx){
+        // var parallel = [];
+        // console.log(column.length)
+        // console.log(data[0])
+        for (var i = 0; i < ronghe_xgx.length; i++) {
+            var index=i;
+            parallel.push({
+                name: '融合'+(i+1),
+                type: 'custom',
+                renderItem: renderItem,
+                data: data[i],
+                xAxisIndex:i,
+                yAxisIndex:i
+            });
+        }
+        console.log(i)
+        parallel.push({
+                type: 'scatter',
+                symbol: 'rect',
+                data:zb_d[indexx],
+                label: {
+                    color:'white',
+                    fontSize:'15',
+                    formatter: '{@[2]}',
+                    show: true
+                },
+                itemStyle: {
+                    emphasis: {
+                        borderColor: '#333',
+                        borderWidth: 1
+                    }
+                },
+                xAxisIndex:i,
+                yAxisIndex:i
+        })
+        console.log(parallel);
+        return parallel;
+    };
+    function regrid(){
+        var gridd=[]
+        for (var i = 0; i < ronghe_xgx.length;i++) {
+            gridd.push({
+                top: 20+i*30,
+                left: 50,
+                right: 50,
+                height: 20
+            })
+        }
+        gridd.push({
+            top: 110+(ronghe_xgx.length-1)*30,
+            left: 50,
+            right: 50,
+            height: 600-110-(ronghe_xgx.length-1)*30-180,
+        })
+        // option6.visualMap[0].top=110+(ronghe_xgx.length-1)*30-40;
+        // option6.dataZoom[0].top=110+(ronghe_xgx.length-1)*30-80;
+        return gridd
+    };
+    function rexAxis(){
+        var xAxiss=[]
+        for (var i = 0; i < ronghe_xgx.length;i++) {
+            xAxiss.push({
+                type: 'time',
+                position: 'top',
+                gridIndex: i,
+                axisLabel:{
+                    show:false
+                },
+                splitLine: {
+                    show: false
+                },
+                axisTick:{
+                    show: false
+                }
+            })
+        }
+        xAxiss.push({
+            type: 'category',
+            gridIndex: i,
+            splitArea: {
+                show: true
+            }
+        })
+        return xAxiss
+    };
+    function reyAxis(){
+        var yAxiss=[]
+        for (var i = 0; i < ronghe_xgx.length;i++) {
+            yAxiss.push({
+                type: 'value',
+                gridIndex: i,
+                inverse: true,
+                show: false,
+                min: 0,
+                max: 10
+            })
+        }
+        yAxiss.push({
+            type: 'category',
+            gridIndex: i,
+            splitArea: {
+                show: true
+            }
+        })
+        return yAxiss
+    }
+    var option6 = {
+        // title: {
+        //     text: '动态数据 + 时间坐标轴'
+        // },
+        tooltip: {
+            //   trigger: 'axis',
+            formatter: function(params) {
+                // console.log("123",params)
+                if(params.componentSubType=="scatter"){
+                    return [
+                        // '类别名称: ' + param.seriesName,
+                        '参数1: ' + params.data[3],
+                        '参数2: ' + params.data[4],
+                        '相关性得分: ' + params.data[2],
+                    ].join('<br/>')
+                }
+                else{
+                    return [
+                        // '类别名称: ' + param.seriesName,
+                        '参数1: ' + params.data.value[2],
+                        '参数2: ' + params.data.value[3],
+                        '相关性: ' + params.data.value[1].toFixed(2),
+                    ].join('<br/>')
+                }
+                // console.log("123",params)
+                // return [
+                //     // '类别名称: ' + param.seriesName,
+                //     '参数1: ' + params.data.value[2],
+                //     '参数2: ' + params.data.value[3],
+                //     '相关性: ' + params.data.value[1].toFixed(2),
+                // ].join('<br/>')
+                // return params.dataIndex.toString()
+                // if(params.seriesIndex==3){
+                //     return params.data[2].toString()
+                // }
+                // else{
+                //     return params.data[1].toString()
+                // }
+            },
+            axisPointer: {
+                animation: false
+            }
+        },
+        visualMap: [{
+            top: 110+(ronghe_xgx.length-1)*30-35,
+            type: 'piecewise',
+            orient: 'horizontal',
+            left: 'center',
+            dimension: 2,
+            seriesIndex:[ronghe_xgx.length],
+            pieces: [
+                // {
+                // max: -100,
+                // symbolSize: 60,
+                // color: '#000000',
+                // colorAlpha: 1,
+                // label: '爆表',
+                // },
+                // {
+                //     min: -100,
+                //     max: -90,
+                //     symbolSize: 50,
+                //     color: '#27727b',
+                //     colorAlpha: 1
+                // },
+                {
+                    min: -100,
+                    max: -80,
+                    symbolSize: 20,
+                    color: '#313695',
+                    // colorAlpha: 1
+                },
+                {
+                    min: -80,
+                    max: -50,
+                    symbolSize: 10,
+                    color: '#4575b4',
+                    // colorAlpha: 0.4
+                },
+                {
+                    min: -50,
+                    max: 0,
+                    symbolSize: 5,
+                    color: '#74add1',
+                    // colorAlpha: 0.4
+                },
+                {
+                    min: 0,
+                    max: 50,
+                    symbolSize: 5,
+                    color: '#fdae61',
+                    // colorAlpha: 0.4
+                },
+                {
+                    min: 50,
+                    max: 80,
+                    symbolSize: 10,
+                    color: '#f46d43',
+                    // colorAlpha: 0.4
+                },
+                {
+                    min: 80,
+                    max: 100,
+                    symbolSize: 20,
+                    color: '#a50026',
+                    // colorAlpha: 1
+                },
+            ]
+            },
+            {
+                type: 'continuous',
+                min: -1,
+                max: 1,
+                itemWidth:15,
+                itemHeight:60,
+                dimension: 1,
+                calculable: true,
+                top:20,
+                seriesIndex:vxindex,
+                left:'90%',
+                inRange: {
+                    color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                },
+            },
+        ],
+        grid:regrid(),
+        dataZoom: [{
+            top: 110+(ronghe_xgx.length-1)*30-65,
+            left: 50,
+            height:20,
+            // xAxisIndex: [0,1,2,3,4],
+            xAxisIndex: [ronghe_xgx.length],
+            type: 'slider', // 数据滑块
+            // xAxisIndex: 0,
+            start: 0,
+            minSpan: 8, // 5min
+            textStyle:{
+                color:'white'
+            },
+            dataBackground: {
+                lineStyle: {
+                    color: '#95BC2F'
+                },
+                areaStyle: {
+                    color: '#95BC2F',
+                    opacity: 1
+                }
+            },
+            fillerColor: 'rgba(255,255,255,.6)'
+        },
+            {
+                type: 'inside', // 使鼠标在图表中时滚轮可用
+                xAxisIndex:[ronghe_xgx.length],
+            },
+            {
+                type: 'slider',
+                show: true,
+                yAxisIndex:[ronghe_xgx.length],
+                // yAxisIndex: function (){
+                //     return [ronghe_xgx.length+1]
+                // },
+                left: '95%',
+                // start: 0,
+                // end: 100,
+                startValue: 0,
+                endValue: 3,
+            },
+            {
+                type: 'inside',
+                yAxisIndex:[ronghe_xgx.length],
+                // yAxisIndex: function (){
+                //     return [ronghe_xgx.length+1]
+                // },
+            },
+        ],
+        xAxis:rexAxis(),
+        yAxis:reyAxis(),
+        series:redata(1),
+    };
+
+    //定义一些类目
+    var categories = [
+        { name: '水果'},
+        { name: '蔬菜' },
+        { name: '粮油'},
+        { name:  '副食'},
+        { name: '酒水'},
+        { name: '肉类'}
+    ]
+    //节点的数据，value代表其支持度，以及它们所属的类目
+    var dataSet = [{
+        name: '苹果',
+        value:0.722,
+        category:0
+    }, {
+        name: '土豆',
+        value:0.84,
+        category:1
+    }, {
+        name: '西蓝花',
+        value:0.74,
+        category:1
+    }, {
+        name: '大米',
+        value:0.673,
+        category:2
+    }, {
+        name: '盐',
+        value:0.628,
+        category:3
+    }, {
+        name: '啤酒',
+        value:0.707,
+        category:4
+    }, {
+        name: '红酒',
+        value:0.507,
+        category:4
+    }, {
+        name: '炸鸡',
+        value:0.710,
+        category:5
+    }, {
+        name: '牛排',
+        value:0.610,
+        category:5
+    }]
+
+    //关联数据，value为可信度
+    var dataRelate = [
+        {source:'土豆',target:'大米',value:0.73},
+        {source:'苹果',target:'土豆',value:0.753},
+        {source:'大米',target:'盐',value:0.724},
+        {source:'炸鸡',target:'啤酒',value:0.91},
+        {source:'牛排',target:'红酒',value:0.919},
+        {source:'土豆',target:'西蓝花',value:0.858},
+        {source:'牛排',target:'土豆',value:0.76},
+        {source:'牛排',target:'西蓝花',value:0.856}];
+
+    //生成节点所需的数据对象
+    var data1 = dataSet.map(function (node,i) {
+        // console.log(node,i)
+        return {
+            //x: node.x,
+            //y: node.y,
+            name: node.name,
+            value : node.value,
+            category: node.category,
+            x:-100,
+            y:0+i*10,
+            symbolSize:10 //node.value*100//支持度越大，节点越大
+        };
+    });
+
+    //生成连线所需的数据对象
+    var link1 = dataRelate.map(function (node) {
+        return {
+            source: node.source,
+            target: node.target,
+            value: node.value+'(可信度)',
+            label: {
+                normal: {
+                    show: false,
+                    formatter: function (x) {
+                        return node.value;
+                    }
+                }
+            },
+            lineStyle: {
+                normal: {
+                    width : 20*(node.value - 0.65),//可信度越高，连线越粗
+                    color : 'source'
+                }
+            }
+
+        };
+    });
+
+
+    var option8 = {
+        // title: {
+        //     text: 'Graph 简单示例'
+        // },
+        xAxis: [
+            {
+                show:true,
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:0
+            },
+            {
+                show:true,
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:1
+            },
+            {
+                show:true,
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:2
+            },
+            {
+                show:true,
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:3
+            },
+            {
+                show:true,
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:4,
+            },
+            {
+                show:true,
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:5,
+            },
+        ],
+        yAxis: [
+            {
+                show:false,
+                type: 'value',
+                gridIndex:0,
+                max: function (value) {
+                    return value.max ;
+                },
+                min: function (value) {
+                    return value.min ;
+                },
+            },
+            {
+                show:false,
+                type: 'value',
+                gridIndex:1,
+                max: function (value) {
+                    return value.max ;
+                },
+                min: function (value) {
+                    return value.min ;
+                },
+            },
+            {
+                show:false,
+                type: 'value',
+                gridIndex:2,
+                max: function (value) {
+                    return value.max ;
+                },
+                min: function (value) {
+                    return value.min ;
+                },
+            },
+            {
+                show:false,
+                type: 'value',
+                gridIndex:3,
+                max: function (value) {
+                    return value.max ;
+                },
+                min: function (value) {
+                    return value.min ;
+                },
+            },
+            {
+                show:false,
+                type: 'value',
+                gridIndex:4,
+                max: function (value) {
+                    return value.max ;
+                },
+                min: function (value) {
+                    return value.min ;
+                },
+            },
+            {
+                show:false,
+                type: 'value',
+                gridIndex:5,
+                max: function (value) {
+                    return value.max ;
+                },
+                min: function (value) {
+                    return value.min ;
+                },
+            },
+        ],
+        dataZoom: [
+            // {
+            //     type: 'slider',//数据滑块
+            //     show:true,
+            //     xAxisIndex:[0],//表示x轴折叠
+            //     start:0,
+            //     end:35,
+            //     //minSpan:2,    //5min
+            //     // minSpan:16,   //10min
+            //     // minSpan:24,   //15min
+            //     // minSpan:50,   //30min
+            //     dataBackground:{
+            //         lineStyle:{
+            //             color:'#95BC2F'
+            //         },
+            //         areaStyle:{
+            //             color:'#95BC2F',
+            //             opacity:1,
+            //         }
+            //     },
+            //     fillerColor:'rgba(255,255,255,.6)'
+            // },
+            {
+                xAxisIndex:[0,1,2,3,4,5],//表示x轴折叠
+                type:'inside'//使鼠标在图表中时滚轮可用
+            }
+        ],
+        grid: [
+            {
+                top:0,
+                // width:300,
+                // bottom: 770,
+                left:120,
+                height:50
+
+            },
+            {
+                top:90,
+                left:120,
+                height:50
+            },
+            {
+                top:180,
+                left:120,
+                height:50
+            },
+            {
+                top: 270,
+                left:120,
+                height:50
+            },
+            {
+                top: 360,
+                left:120,
+                height:50
+            },
+            {
+                top: 450,
+                left:120,
+                height:50
+            },
+        ],
+        tooltip: {},
+        animationDurationUpdate: 1500,
+        animationEasingUpdate: 'quinticInOut',
+        series: [
+            {
+                type: 'graph',
+                layout: 'none',
+                symbolSize: 20,
+                // roam: true,
+                label: {
+                    show: true
+                },
+                edgeSymbol: ['none', 'none'],
+                edgeSymbolSize: [4, 10],
+                edgeLabel: {
+                    fontSize: 20
+                },
+                label: {
+                    normal: {
+                        show: true,
+                        fontSize:10,
+                        position: 'right',
+                        formatter: '{b}',
+                        interval: 0
+                    }
+                },
+                left:50,
+                tooltip:{
+                    position:'right',
+                    formatter:function (params){
+                        console.log(params)
+                        if(params.dataType=="edge"){
+                            console.log(1)
+                            return [
+                                // '类别名称: ' + param.seriesName,
+                                '参数1: ' + params.data.source,
+                                '参数2: ' + params.data.target,
+                                '相关性: ' + params.data.value.toFixed(2),
+                            ].join('<br/>')
+                        }
+                        else{
+                            return params.data.name
+                        }
+                        // return [
+                        //     // '类别名称: ' + param.seriesName,
+                        //     '参数1: ' + params.data.source,
+                        //     '参数2: ' + params.data.target,
+                        //     '相关性: ' + params.data.value.toFixed(2),
+                        // ].join('<br/>')
+                    }
+                },
+                data: [{
+                    name: '财务启动预算填报',
+                    x: 100,
+                    y: 50,
+                    width:5
+                }, {
+                    name: '部门填报',
+                    x: 100,
+                    y: 100
+                }, {
+                    name: '板块审批',
+                    x: 100,
+                    y: 150
+                },{
+                    name: '财务确认',
+                    x: 100,
+                    y: 200
+                }, {
+                    name: '板块审批1',
+                    x: 100,
+                    y: 250
+                },  {
+                    name: '板块审批2',
+                    x: 100,
+                    y: 300
+                },],
+                // links: [],
+                links: [{
+                    source:'财务启动预算填报',
+                    target: '部门填报',
+                    value:1,
+                    lineStyle: {
+                        normal: {
+                            // width : 20,//可信度越高，连线越粗
+                            color : 'red'
+                        }
+                    }
+                },{
+                    source: '部门填报',
+                    target: '板块审批',
+                    value:-1,
+                    lineStyle: {
+                        normal: {
+                            // width : 20,//可信度越高，连线越粗
+                            color : 'blue'
+                        }
+                    }
+                },{
+                    source: '板块审批',
+                    target:'板块审批1',
+                    value:1,
+                    lineStyle: {
+                        normal: {
+                            // width : 20,//可信度越高，连线越粗
+                            color : 'red'
+                        }
+                    }
+                },{
+                    source: '板块审批1',
+                    target:'板块审批2',
+                    value:1,
+                    lineStyle: {
+                        normal: {
+                            // width : 20,//可信度越高，连线越粗
+                            color : 'red'
+                        }
+                    }
+                },{
+                    source:  '板块审批2',
+                    target: 1,
+                    value:-1,
+                    lineStyle: {
+                        normal: {
+                            // width : 20,//可信度越高，连线越粗
+                            color : 'blue'
+                        }
+                    }
+                },{
+                    source:  '板块审批',
+                    target: '财务确认',
+                    value:1,
+                    lineStyle: {
+                        normal: {
+                            // width : 20,//可信度越高，连线越粗
+                            color : 'red'
+                        }
+                    }
+                }],
+                focusNodeAdjacency:true,//当鼠标移动到节点上，突出显示节点以及节点的边和邻接节点
+                // draggable: true,//指示节点是否可以拖动
+                label: {
+                    normal: {
+                        show: true,
+                        fontSize:10,
+                        position: 'top',
+                        formatter: '{b}',
+                        interval: 0
+                    }
+                },
+                edgeSymbol: ['none', 'none'],
+                edgeSymbolSize: 12,
+                edgeLabel: {
+                    normal: {
+                        textStyle: {
+                            fontSize: 15
+                        }
+                    }
+                },
+
+                force: {
+                    repulsion: 200,
+                    gravity:0.25,
+                    edgeLength: [100,400],
+                },
+                itemStyle:{
+                    normal: {
+                        borderColor: '#fff',
+                        borderWidth: 1,
+                        shadowBlur: 10,
+                    }
+
+                },
+                lineStyle: {
+                    // normal: {
+                        opacity: 0.9,
+                        curveness: 0.2,
+                        // color:'blue'
+                        // color : function (params){
+                        //     console.log(params)
+                        //     if(params.data.value<0){
+                        //         return 'blue'
+                        //     }
+                        //     else {
+                        //         return 'red'
+                        //     }
+                        // }
+                    // }
+                },
+            }
+            ,
+            {
+                symbol: "none",
+                data: [820, 1500, 20, 934, 1290, 1330, 1320],
+                type: 'line',
+                lineStyle: {
+                    normal: {
+                        width: 2,
+                    }
+                },
+                smooth: true,
+                xAxisIndex:0,
+                yAxisIndex:0,
+            },
+            {
+                symbol: "none",
+                data: [820, 1500, 20, 934, 1290, 1330, 1320],
+                type: 'line',
+                lineStyle: {
+                    normal: {
+                        width: 2,
+                    }
+                },
+                smooth: true,
+                xAxisIndex:1,
+                yAxisIndex:1,
+            },
+            {
+                symbol: "none",
+                data: [820, 1500, 20, 934, 1290, 1330, 1320],
+                type: 'line',
+                lineStyle: {
+                    normal: {
+                        width: 2,
+                    }
+                },
+                smooth: true,
+                xAxisIndex:2,
+                yAxisIndex:2,
+            },
+            {
+                symbol: "none",
+                data: [820, 1500, 20, 934, 1290, 1330, 1320],
+                type: 'line',
+                lineStyle: {
+                    normal: {
+                        width: 2,
+                    }
+                },
+                smooth: true,
+                xAxisIndex:3,
+                yAxisIndex:3,
+            },
+            {
+                symbol: "none",
+                data: [820, 1500, 20, 934, 1290, 1330, 1320],
+                type: 'line',
+                lineStyle: {
+                    normal: {
+                        width: 2,
+                    }
+                },
+                smooth: true,
+                xAxisIndex:4,
+                yAxisIndex:4,
+            },
+            {
+                symbol: "none",
+                data: [820, 1500, 20, 934, 1290, 1330, 1320],
+                type: 'line',
+                lineStyle: {
+                    normal: {
+                        width: 2,
+                    }
+                },
+                smooth: true,
+                xAxisIndex:5,
+                yAxisIndex:5,
+            }
+        ]
+    };
+
+    var option9 = {
+        tooltip: {
+            show: true,
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow',
+            },
+        },
+        legend: {
+            left: 'center',
+            bottom: 24,
+            itemWidth: 15,
+            itemHeight: 11,
+            itemGap: 20,
+            borderRadius: 4,
+            textStyle: {
+                color: '#262C41',
+                fontSize: 14,
+            },
+            // data: legendData,
+        },
+        grid: [
+            {
+                left: '15%',
+                width: '30%',
+                containLabel: true,
+                bottom:60,
+                top:20
+            },
+            {
+                left: '52%',
+                width: '0%',
+                bottom: 60 + 16,
+                top:20
+            },
+            {
+                right: '15%',
+                width: '30%',
+                containLabel: true,
+                bottom:60,
+                top:20
+            },
+        ],
+        // .map((item) =>
+        //     _.merge(
+        //         {
+        //             top,
+        //         },
+        //         item
+        //     )
+        // ),
+        xAxis: [
+            {
+                type: 'value',
+                inverse: true,
+                axisLabel: {
+                    show: true,
+                },
+                axisLine: {
+                    show: false,
+                },
+                axisTick: {
+                    show: false,
+                },
+                splitLine: {
+                    show: true,
+                },
+                axisLabel: {
+                    color: '#949AA8',
+                    margin: 0,
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                        type: 'dashed',
+                    },
+                },
+            },
+            {
+                gridIndex: 1,
+                show: true,
+                axisLabel: {
+                    color: '#949AA8',
+                    margin: 0,
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                        type: 'dashed',
+                    },
+                },
+            },
+            {
+                gridIndex: 2,
+                type: 'value',
+                axisLabel: {
+                    show: true,
+                },
+                axisLine: {
+                    show: false,
+                },
+                axisTick: {
+                    show: false,
+                },
+                splitLine: {
+                    show: true,
+                },
+                axisLabel: {
+                    color: '#949AA8',
+                    margin: 0,
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                        type: 'dashed',
+                    },
+                },
+            },
+        ],
+        yAxis: [
+            {
+                type: 'category',
+                inverse: false,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                    },
+                },
+                axisTick: {
+                    show: false,
+                },
+                data: [1,2,3,4,5,6,7,8],
+                position: 'right',
+                axisLabel: {
+                    show: false,
+                },
+                axisLine: {
+                    show: true,
+                },
+            },
+            {
+                type: 'category',
+                inverse: false,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                    },
+                },
+                axisTick: {
+                    show: false,
+                },
+                data: [1,2,3,4,5,6,7,8],
+                gridIndex: 1,
+                position: 'center',
+                axisLabel: {
+                    align: 'center',
+                    padding: [8, 0, 0, 0],
+                    fontSize: 10,
+                    color: `#262C41`,
+                },
+                axisLine: {
+                    show: false,
+                },
+            },
+            {
+                type: 'category',
+                inverse: false,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                    },
+                },
+                axisTick: {
+                    show: false,
+                },
+                data: [1,2,3,4,5,6,7,8],
+                gridIndex: 2,
+                position: 'left',
+                axisLabel: {
+                    show: false,
+                },
+                axisLine: {
+                    show: true,
+                },
+            },
+        ],
+        series: [
+            {
+                type: 'bar',
+                barWidth: 11,
+                stack: '总量1',
+                name:'u解释x',
+                label: {
+                    // show:true,
+                    position: 'left',
+                },
+                itemStyle: {
+                    color: '#01C5B2',
+                    barBorderRadius: [4, 0, 0, 4],
+                },
+                data: [1,2,3,4,5,6,7,8],
+            },
+            {
+                type: 'bar',
+                barWidth: 11,
+                stack: '总量1',
+                name: 'v解释x',
+                label: {
+                    show: true,
+                    position: 'left',
+                },
+                itemStyle: {
+                    // color: '#01C5B2',
+                    barBorderRadius: [4, 0, 0, 4],
+                },
+                data:[1,2,3,4,5,6,7,8],
+            },
+            {
+                type: 'bar',
+                barWidth: 11,
+                xAxisIndex: 2,
+                yAxisIndex: 2,
+                name: 'u解释y',
+                stack: '总量2',
+                label: {
+                    // show:true,
+                    position: 'right',
+                },
+                itemStyle: {
+                    // color: '#FB6F6C',
+                    barBorderRadius: [0, 4, 4, 0],
+                },
+                data: [1,2,3,4,5,6,7,8],
+            },
+            {
+                type: 'bar',
+                barWidth: 11,
+                xAxisIndex: 2,
+                yAxisIndex: 2,
+                name: 'v解释y',
+                stack: '总量2',
+                label: {
+                    show:true,
+                    position: 'right',
+                },
+                itemStyle: {
+                    color: '#FB6F6C',
+                    barBorderRadius: [0, 4, 4, 0],
+                },
+                data: [1,2,3,4,5,6,7,8],
+            },
+        ],
+    };
+    var option10 = {
+        // title: {
+        //     text: '基础雷达图'
+        // },
+        // legend: {
+        //     // data: ['预算分配（Allocated Budget）', '实际开销（Actual Spending）']
+        // },
+        tooltip: {
+            formatter: function(param) {
+                console.log("s",param)
+                if (param.componentSubType=='line'){
+                    // var value = param.value;
+                    return [
+                        // '类别名称: ' + param.seriesName,
+                         param.seriesName,
+                         param.name,
+                        '系数: ' + param.data.toFixed(2),
+                    ].join('<br/>')
+                    // return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 16px;padding-bottom: 7px;margin-bottom: 7px;"> ' + value[2] +
+                    //     '</div>';
+                }
+                else if (param.componentSubType=="radar"){
+                    // var value = param.value;
+                    return [
+                        // '类别名称: ' + param.seriesName,
+                        '第一组相关性: ' + param.value[0].toFixed(2),
+                        '卡方计算值: ' + param.value[1].toFixed(2),
+                        '卡方临界: ' + param.value[2].toFixed(2),
+                    ].join('<br/>')
+                }
+                // var value = param.value;
+                // return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 16px;padding-bottom: 7px;margin-bottom: 7px;"> ' + value[2] +
+                //     '</div>';
+            }
+        },
+        legend: {
+            left: 'center',
+            top: '0%',
+            itemWidth: 15,
+            itemHeight: 11,
+            itemGap: 20,
+            borderRadius: 4,
+            textStyle: {
+                color: '#262C41',
+                fontSize: 14,
+            },
+            // data: legendData,
+        },
+        grid:[
+            {
+                bottom: '40%',
+                height:'20%',
+                width:'90%'
+            },
+            {
+                bottom:'15%',
+                height:'20%',
+                width:'90%'
+            }
+        ],
+        xAxis: [
+            {
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:0,
+                axisLabel:{
+                    show:false
+                }
+
+            },
+            {
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex:1,
+                axisLabel:{
+                    show:false
+                }
+            },
+        ],
+        yAxis: [
+            {
+                type: 'value',
+                gridIndex:0,
+            },
+            {
+                type: 'value',
+                gridIndex:1,
+            },
+        ],
+        radar: {
+            center: ['50%', '26%'],
+            radius: 70,
+            // shape: 'circle',
+            indicator: [
+                { name: 'uv相关性', },
+                { name: '卡方计算值', },
+                { name: '卡方临界值', },
+            ]
+        },
+        series: [
+            {
+                data: [150, 230, 224, 218, 135, 147, 260],
+                type: 'line',
+                name: '第1组',
+                xAxisIndex:0,
+                yAxisIndex:0
+            },
+            {
+                data: [150, 230, 224, 218, 135, 147, 260],
+                type: 'line',
+                name: '第2组',
+                xAxisIndex:1,
+                yAxisIndex:1
+            },
+            {
+            name: '预算 vs 开销（Budget vs spending）',
+            type: 'radar',
+            data: [
+                {
+                    value: [4200, 3000, 20000],
+                    name: '第1组'
+                },
+                {
+                    value: [5000, 14000, 28000],
+                    name: '第2组'
+                }
+            ]
+        },
+            // {
+            //     data: [150, 230, 224, 218, 135, 147, 260],
+            //     type: 'line',
+            //     name: '第1组',
+            //     xAxisIndex:0,
+            //     yAxisIndex:0
+            // },
+            // {
+            //     data: [150, 230, 224, 218, 135, 147, 260],
+            //     type: 'line',
+            //     name: '第2组',
+            //     xAxisIndex:1,
+            //     yAxisIndex:1
+            // }
+        ]
+    };
+    myChart7.setOption(option9);
+    myChart8.setOption(option10);
+    // $('#container6').css({ 'height': Math.random()*1000 + 'px' });
+    myChart6.setOption(option8);
+    // console.log("option6",option6);
+    myChart2.setOption(option5);
+    myChart.setOption(option);
+    myChart4.setOption(option6);
+    myChart3.on('brushSelected', function (params) {
+        console.log('brushSelected',params)
+    });
+    myChart4.on('click',function(params){
+        // console.log(params);
+        if(params.componentSubType=="custom"){
+            option6.series[ronghe_xgx.length].data=zb_d[params.componentIndex];
+            myChart4.setOption(option6);
+        }
+        else{
+            weizhi=all_name.indexOf(params.data[4])
+            weizhi2=all_name.indexOf(params.data[3])
+            w_xgx=all_xgx[weizhi].slice(-zb_ny.length)
+            w_name=all_name.slice(-zb_ny.length)
+            w_xgx2=all_xgx[weizhi2].slice(0,biwen_col.length)
+            w_name2=all_name.slice(0,biwen_col.length)
+            // console.log(weizhi,weizhi2)
+            // console.log(w_xgx,w_name)
+            // console.log(w_xgx2,w_name2)
+            var data_qian = [];
+            var labelData_qian = [];
+            for (var i = 0; i < w_name.length; i++) {
+                if(w_xgx[i]<=0){
+                    // data_qian.push({
+                    //     value: Math.abs(w_xgx[i]),
+                    //     name: w_name[i]+'(负相关)'
+                    // });
+                    labelData_qian.push({
+                        value: w_xgx[i],
+                        name: w_xgx[i].toFixed(2),
+                        name1:params.data[4]
+                    });
+                }
+                else {
+                    // data_qian.push({
+                    //     value: w_xgx[i],
+                    //     name: w_name[i]
+                    // });
+                    labelData_qian.push({
+                        value: w_xgx[i],
+                        name: w_name[i],
+                        name1:params.data[4]
+                    });
+                }
+            }
+            for (var i = 0; i < w_name2.length; i++) {
+                if(w_xgx2[i]<=0){
+                    data_qian.push({
+                        value: Math.abs(w_xgx2[i]),
+                        name: w_name2[i]+'(负相关)',
+                        name1:params.data[3]
+                    });
+                    // labelData_qian.push({
+                    //     value: w_xgx[i],
+                    //     name: w_xgx[i].toFixed(2),
+                    // });
+                }
+                else {
+                    data_qian.push({
+                        value: w_xgx2[i],
+                        name: w_name2[i],
+                        name1:params.data[3]
+                    });
+                    // labelData_qian.push({
+                    //     value: w_xgx[i],
+                    //     name: w_name[i]
+                    // });
+                }
+            }
+            var compare = function (prop) {
+                return function (obj1, obj2) {
+                    var val1 = obj1[prop];
+                    var val2 = obj2[prop];
+                    if (val1 < val2) {
+                        return 1;
+                    } else if (val1 > val2) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                }
+            };
+            var data_hou=data_qian.sort(compare("value"))
+            var labelData_hou=labelData_qian.sort(compare("value"))
+            // console.log(data_hou)
+            option7.series[1].data=data_hou;
+            option7.series[0].data=labelData_hou;
+            myChart5.setOption(option7);
+        }
+    })
+    myChart5.on('mouseover', function (param) {
+        option3.series[1].itemStyle.normal={
+            lineStyle:{
+                color:'#00FF00',
+                opacity:0
+            },
+            color: function(params) {
+                // console.log(params)
+                // build a color map as your need.
+                var colorList = [
+                    '#C1232B','#B5C334','#FCCE10','#E87C25','#27727B',
+                    '#FE8463','#9BCA63','#FAD860','#F3A43B','#60C0DD',
+                    '#D7504B','#C6E579','#F4E001','#F0805A','#26C0C0'
+                ];
+                if (params.data[2]==param.data.name){
+                    return colorList[0]
+                }
+                else{
+                    return colorList[1]
+                }
+            }
+        };
+        myChart3.setOption(option3);
+    })
+    myChart4.on('mouseover', function (param) {
+        // console.log("params2",param)
+        // alert(1);
+
+        if (param.componentSubType == "scatter") {
+            option3.series[1].itemStyle.normal={
+                lineStyle:{
+                    color:'#00FF00',
+                    opacity:0
+                },
+                color: function(params) {
+                    // console.log(params)
+                    // build a color map as your need.
+                    var colorList = [
+                        '#C1232B','#B5C334','#FCCE10','#E87C25','#27727B',
+                        '#FE8463','#9BCA63','#FAD860','#F3A43B','#60C0DD',
+                        '#D7504B','#C6E579','#F4E001','#F0805A','#26C0C0'
+                    ];
+                    if (params.data[2]==param.data[4]){
+                        return colorList[0]
+                    }
+                    else{
+                        return colorList[1]
+                    }
+                }
+            };
+            myChart3.setOption(option3);
+        }
+    });
+    myChart2.on('mouseover', function (param) {
+        // console.log("params2",param)
+        // alert(1);
+
+        if (param.componentIndex == 1) {
+            var i=parseInt(param.name);
+            var mub=param.data[1];
+            // console.log(i);
+            // console.log(mub);
+            // console.log(biwen_data[i]);
+            var suoyin=biwen_data[i].indexOf(mub);
+            // console.log("suoyin",suoyin)
+            option3.series[1].itemStyle.normal={
+                lineStyle:{
+                    color:'#00FF00',
+                    opacity:0
+                },
+                color: function(params) {
+                    // console.log(params)
+                    // build a color map as your need.
+                    var colorList = [
+                        '#C1232B','#B5C334','#FCCE10','#E87C25','#27727B',
+                        '#FE8463','#9BCA63','#FAD860','#F3A43B','#60C0DD',
+                        '#D7504B','#C6E579','#F4E001','#F0805A','#26C0C0'
+                    ];
+                    if (params.data[2]==biwen_col[suoyin]){
+                        return colorList[0]
+                    }
+                    else{
+                        return colorList[1]
+                    }
+                }
+            };
+            myChart3.setOption(option3);
+        }
+    });
+    myChart.on('click',function(params){
+        if(listt.indexOf(params.data[3])!=-1)
+        {
+            index=listt.indexOf(params.data[3])
+            listt.splice(index, 1)
+        }
+        else {
+            listt.push(params.data[3])
+        }
+        // console.log(listt);
+        option3.series[1].itemStyle.normal={
+            lineStyle:{
+                color:'#00FF00',
+                opacity:0
+            },
+            color: function(params) {
+                // console.log("ss",params)
+                // build a color map as your need.
+                var colorList = [
+                    '#C1232B','#B5C334','#FCCE10','#E87C25','#27727B',
+                    '#FE8463','#9BCA63','#FAD860','#F3A43B','#60C0DD',
+                    '#D7504B','#C6E579','#F4E001','#F0805A','#26C0C0'
+                ];
+                // console.log(params.data[2]);
+                // console.log(listt);
+                if ($.inArray(params.data[2],listt)>=0){
+                    // console.log("111")
+                    return colorList[0]
+                }
+                else{
+                    return colorList[1]
+                }
+            }
+        }
+        // console.log("sss",option3);
+        myChart3.setOption(option3);
+        // if(listt.length!=0) {
+            $.ajax({
+                type: "POST",
+                url: "zhexian",
+                dataType: "json",
+                async: false,
+                data: {"choose_id": JSON.stringify(listt)},
+                success: function (data) {
+                    // console.log(data);
+                    // option2['xAxis']['data'] = data['xData'];
+                    var dat = data['data1'];
+                    var column = listt;
+                    var yuan=['boxplot','outlier'];
+                    yuan=yuan.concat(column)
+                    // option5.xAxis.data=data['xData'];
+                    // option5.series=(option5.series).concat(serr(dat, column));
+                    option5.legend.data=yuan;
+                    option5.series=serr(dat,column);
+                    myChart2.setOption(option5,true);
+                    // console.log(option5)
+                    // option2['series'] = ser(dat, column);
+                    // option2['legend']['data'] = column;
+                    // myChart2.setOption(option2);
+                }
+            });
+        // }
+    });
+    myChart3.on('click',function(params){
+        // console.log("a",params)
+        if(listt.indexOf(params.data[2])!=-1)
+        {
+            index=listt.indexOf(params.data[2])
+            listt.splice(index, 1)
+        }
+        else {
+            listt.push(params.data[2])
+        }
+        // console.log(listt);
+        option3.series[1].itemStyle.normal={
+            lineStyle:{
+                color:'#00FF00',
+                opacity:0
+            },
+            color: function(params) {
+                // console.log("ss",params)
+                // build a color map as your need.
+                var colorList = [
+                    '#C1232B','#B5C334','#FCCE10','#E87C25','#27727B',
+                    '#FE8463','#9BCA63','#FAD860','#F3A43B','#60C0DD',
+                    '#D7504B','#C6E579','#F4E001','#F0805A','#26C0C0'
+                ];
+                // console.log(params.data[2]);
+                // console.log(listt);
+                if ($.inArray(params.data[2],listt)>=0){
+                    // console.log("111")
+                    return colorList[0]
+                }
+                else{
+                    return colorList[1]
+                }
+            }
+        }
+        // console.log("sss",option3);
+        myChart3.setOption(option3);
+        // if(listt.length!=0) {
+            $.ajax({
+                type: "POST",
+                url: "zhexian",
+                dataType: "json",
+                async: false,
+                data: {"choose_id": JSON.stringify(listt)},
+                success: function (data) {
+                    // console.log(data);
+                    // option2['xAxis']['data'] = data['xData'];
+                    var dat = data['data1'];
+                    var column = listt;
+                    var yuan=['boxplot','outlier'];
+                    yuan=yuan.concat(column)
+                    // option5.xAxis.data=data['xData'];
+                    // option5.series=(option5.series).concat(serr(dat, column));
+                    option5.legend.data=yuan;
+                    option5.series=serr(dat,column);
+                    myChart2.setOption(option5,true);
+                    // console.log(option5)
+                    // option2['series'] = ser(dat, column);
+                    // option2['legend']['data'] = column;
+                    // myChart2.setOption(option2);
+                }
+            });
+        // }
+    });
+    function serr(data,column){
+        var parallel = [{
+            name: 'boxplot',
+            type: 'boxplot',
+            datasetIndex: 1,
+            tooltip: {formatter: formatter},
+            xAxisIndex:1
+        },
+            {
+                name: 'outlier',
+                type: 'scatter',
+                datasetIndex: 2,
+                tooltip: {formatter: formatter2},
+                xAxisIndex:1,
+                itemStyle:{
+                    color:'#3b6291'
+                }
+            },];
+        // console.log(column.length)
+        // console.log(data[0])
+        for (var i = 0; i < column.length; i++) {
+            parallel.push({name:column[i],xAxisIndex:0,type:'line',data:data[i],sampling:'average',showInLegend: false,lineStyle:{width:5}});
+        }
+        // console.log(parallel);
+        return parallel;
+    };
+    function ser(data,column){
+        var parallel = [];
+        // console.log(column.length)
+        // console.log(data[0])
+        for (var i = 0; i < column.length; i++) {
+            parallel.push({name:column[i],type:'line',data:data[i],sampling:'average',showInLegend: false});
+        }
+        // console.log(parallel);
+        return parallel;
+    };
+    function ser2(data){
+        var parallel = [];
+        // console.log(column.length)
+        // console.log(data[0])
+        for (var i = 0; i < column.length; i++) {
+            parallel.push({name:i,type:'line',data:data[i],symbol: 'circle',symbolSize: 13});
+        }
+        // console.log(parallel);
+        return parallel;
+    };
+
+
+</script>
+</html>

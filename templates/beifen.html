@@ -1,0 +1,2980 @@
+<html>
+<head>
+
+    <!-- Ignore Favicon -> Solved the warning in console of the browser. -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+
+    <title>HTSD_VIS</title>
+    <!-- Three.js and Lodash libraries-->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.0.2/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2/dist/echarts-gl.min.js"></script>
+    <script src="{{url_for('static', filename='modules/three.js-r101/three.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/lodash/lodash.js')}}"></script>
+
+    <!-- Importing D3 minified versions v3 and v5. -->
+    <script src="{{url_for('static', filename='modules/d3v3/d3.min.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/d3/d3.min.js')}}"></script>
+
+    <!-- Importing additional modules such as PCP, annotator, tip, legend, lasso, papaParse, and Jquery. -->
+    <script src="{{url_for('static', filename='modules/d3-annotations/d3-annotator.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/d3-tip/tip.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/d3-legend/d3-legend.min.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/d3-lasso/lasso.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/plotly/plotly_min.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/pcp/d3v3.parcoords.js')}}"></script>
+
+    <script src="{{url_for('static', filename='modules/papa/papaparse.min.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/jquery/jquery.min.js')}}"></script>
+
+    <!-- Basic scripts that we execute. -->
+    <script src="{{url_for('static', filename='js/data_form_handler.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/pca/pca.js')}}"></script>
+
+    <!-- CSS - Styling -->
+    <link rel="stylesheet" href="../static/css/w3.css">
+    <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}"/>
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css"/>
+    <link rel="stylesheet" type="text/css" href="../static/css/d3.parcoords.css">
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.0/css/all.css"
+          integrity="sha384-Mmxa0mLqhmOeaE8vgOSbKacftZcsNYDjQzuCOm6D02luYSzBG8vpaOykv9lFQ51Y" crossOrigin="anonymous">
+    <!-- Bootstrap -->
+
+    <script src="{{url_for('static', filename='modules/popper/popper.min.js')}}"></script>
+    <script src="{{url_for('static', filename='modules/bootstrap/bootstrap.min.js')}}"></script>
+</head>
+
+<body>
+<div className="w3-container">
+
+    <div id="myModal" className="w3-modal">
+        <div className="w3-modal-content w3-card-4 w3-animate-zoom">
+            <header className="w3-container w3-blue">
+                <h2 title="Tip: t-SNE grid search with 25 most diverse projections extracted from 500 generated embeddings (using Procrustes distance). "
+                    style="display:inline-block; font-size: 16px; margin-top: 15px; margin-left: 10px; margin-bottom:15px">
+                    t-SNE Grid Search</h3>
+                    [Sorting:
+                    <select id="param-SortMOver-view" name="param-SortMOver-view" style="color: black"
+                            onChange="ReSortOver()">
+                        <option value="1" selected>Quality Metrics Average (QMA)</option>
+                        <option value="2">Neighborhood Hit (NH)</option>
+                        <option value="3">Trustworthiness (T)</option>
+                        <option value="4">Continuity (C)</option>
+                        <option value="5">Stress (S)</option>
+                        <option value="6">Shepard Diagram Correlation (SDC)</option>
+                    </select>
+                    ]
+            </header>
+            <div id="loader"></div>
+            <div id="gridVisual"></div>
+            <div className="w3-container w3-light-grey w3-padding">
+                <button id="confirmModal" className="w3-button w3-left w3-white w3-border"
+                        style="margin-top: -3px; margin-bottom: -3px" onClick="ReSort(true)" disabled>Confirm
+                </button>
+                <button id="closeModal" className="w3-button w3-right w3-white w3-border"
+                        style="margin-top: -3px; margin-bottom: -3px" onClick="closeModalFun()">Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div className="container-fluid">
+    <div className="row">
+        <div className="col-lg-3">
+            <div className="panel panel-default" id="left-side-param">
+                <div className="panel-heading">
+                    <h2 className="panel-title" style="display:inline-block" data-toggle="tooltip"
+                        data-placement="right"
+                        title="Tip: a panel for controlling the cluster algorithm and its parameters.">Cluster
+                        Parameter</h2>
+                    <!--                    [M:-->
+                    <!--                    <select id="param-EX-view" name="param-EX-view" data-toggle="tooltip" data-placement="right" title="Tip: the option of changing between grid search (generating 500 projections) and a single set of parameters (1 projection)." onchange="ExecuteMode()">-->
+                    <!--                        <option value="1" selected>Grid Search</option>-->
+                    <!--                        <option value="2">Single Set</option>-->
+                    <!--                    </select>-->
+                    <!--                    ]-->
+                    <div id="cost" title="Tip: the overall cost reduced by each iteration step of the t-SNE algorithm."
+                         style="display:inline-block; margin-top:3px; float:right"></div>
+                </div>
+                <div className="panel-body">
+                    <table className="table table-borderless paramTable"
+                           style="border-collapse: separate ;border-spacing: 10px">
+                        <tbody>
+                        <tr>
+                            <td scope="row"><label id="data" htmlFor="param-dataset" data-toggle="tooltip"
+                                                   data-placement="right"
+                                                   title="Tip: use one of the data sets already provided (only numerical values supported) or upload a new file (do not forget to use * for the target label).">Data
+                                sets</label></td>
+                            <td>
+                                <select id="param-dataset" name="param-dataset"
+                                        style="font-size: 15px; border-radius: 5px;width: 150px">
+                                    <option value="biwen_new_data.csv" selected>biwen_new_data.csv</option>
+                                    <!--                                    <option value="breast-cancer-wisconsin.csv">Breast Cancer</option>-->
+                                    <!--                                    <option value="iris.csv">Iris</option>-->
+                                    <!--                                    <option value="SPECTF.csv">SPECTF</option>-->
+                                    <!--                                    <option value="blobs.csv">Gaussian Clusters</option>-->
+                                    <option value="empty">Upload File</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button type="button" className="button" id="FactRes" onClick="FactoryReset()"
+                                        data-toggle="tooltip" data-placement="right"
+                                        title="Tip: Restart the entire web page/application.">Factory reset
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td scope="row"><label id="data2" htmlFor="param-position" data-toggle="tooltip"
+                                                   data-placement="right">Spatial location</label></td>
+                            <td scope="row" colSpan="2">
+                                <select id="param-position" name="param-position"
+                                        style="font-size: 15px; border-radius: 5px;width: 250px">
+                                    <option value="高温过热器出口段横向" selected>高温过热器出口段横向</option>
+                                    <option value="低温过热器上部屏出口段后墙横向">低温过热器上部屏出口段后墙横向</option>
+                                    <option value="低温过热器下部屏出口段后墙横向">低温过热器下部屏出口段后墙横向</option>
+                                    <option value="后墙隔墙出口段">后墙隔墙出口段</option>
+                                    <option value="水冷壁左侧墙垂直">水冷壁左侧墙垂直</option>
+                                    <option value="水冷壁右侧墙垂直">水冷壁右侧墙垂直</option>
+                                    <option value="水冷壁前墙垂直">水冷壁前墙垂直</option>
+                                    <option value="水冷壁后墙垂直">水冷壁后墙垂直</option>
+                                    <option value="水冷壁左侧墙螺旋">水冷壁左侧墙螺旋</option>
+                                    <option value="水冷壁右侧墙螺旋">水冷壁右侧墙螺旋</option>
+                                    <option value="水冷壁前墙螺旋">水冷壁前墙螺旋</option>
+                                    <option value="水冷壁后墙螺旋">水冷壁后墙螺旋</option>
+                                    <!--                                    <option value="blobs.csv">Gaussian Clusters</option>-->
+                                    <!--                                    <option value="empty">Upload File</option>-->
+                                </select>
+                            </td>
+                            <!--                            <td><button type="button" class="button" id="FactRes2" onclick="FactoryReset()" data-toggle="tooltip" data-placement="right" title="Tip: Restart the entire web page/application.">Factory reset</button></td>-->
+                        </tr>
+                        <tr>
+                            <td scope="row"><label htmlFor="param-n_cluster_max" data-toggle="tooltip"
+                                                   data-placement="right">n_cluster_max</label></td>
+                            <td><input id="param-n_cluster_max" type="range" min="2" max="30" value="10" , step="1">
+                            </td>
+                            <td>
+                                <output htmlFor="param-n_cluster_max" id="param-n_cluster_max-value">10</output>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td scope="row"><label htmlFor="param-n_cluster_min" data-toggle="tooltip"
+                                                   data-placement="right">n_cluster_min</label></td>
+                            <td><input id="param-n_cluster_min" type="range" min="2" max="30" value="2" , step="1"></td>
+                            <td>
+                                <output htmlFor="param-n_cluster_min" id="param-n_cluster_min-value">2</output>
+                            </td>
+                        </tr>
+                        <!--                        s-->
+                        <!--                        <tr style="margin-top: -4px !important;">-->
+                        <!--                            <td scope="row" colspan="3" >-->
+                        <!--&lt;!&ndash;                                <div id="hider2" title="Tip: wait for line chart to load (overall cost vs. iteration)."></div>&ndash;&gt;-->
+                        <!--                                <div id="container1"></div>-->
+                        <!--                            </td>-->
+                        <!--                        </tr>-->
+                        <!--                        <tr >-->
+                        <!--                            <td scope="row" style="padding-top: 0.8vh !important">-->
+                        <!--                                <input id="file-input" type="file" name="name" style="display: none;"/>-->
+                        <!--                                <button type="button" class="button" onclick='loadAnalysis();' data-toggle="tooltip" data-placement="right" >Excute cluster</button>-->
+                        <!--                            </td>-->
+                        <!--                            <td style="padding-top: 0.8vh !important"><label data-toggle="tooltip" data-placement="right" title="Tip: if you store distances the file size will be larger but on a loading of this execution it will be processed much quicker than without this option enabled.">-->
+                        <!--                                <input id="downloadDists" checked type="checkbox" >-->
+                        <!--                                Cache distances-->
+                        <!--                            </label>-->
+                        <!--                            </td>-->
+                        <!--                            <td style="padding-top: 0.8vh !important">-->
+                        <!--                                <button type="button" class="button" onclick="SaveAnalysis()" data-toggle="tooltip" data-placement="right" title="Tip: save/store previously executed analysis in .txt format.">Store exec.</button>-->
+                        <!--                            </td>-->
+                        <!--                        </tr>-->
+                        <tr>
+                            <td scope="row" colSpan="3">
+                                <button id="ExecuteBut" className="btn btn-primary btn-block"
+                                        onClick="cluster_analysis();" value="Execute cluster analysis">Execute cluster
+                                    analysis
+                                </button>
+                            </td>
+                            <!--                            <td><div id="load_note" style="float:left;width: 200px;display:none;margin-left: 10px;padding-top: 6px">训练中...</div></td>-->
+                        </tr>
+                        <!--                        <tr>-->
+                        <!--                            <td scope="row" colspan="3"><div id="load_note" style="float:left;width: 200px;display:none;margin-left: 10px;padding-top: 6px">训练中...</div></td>-->
+                        <!--                        </tr>-->
+                        <!--                        <tr style="margin-top: -4px !important;">-->
+                        <!--                            <td scope="row" colspan="3" >-->
+                        <!--                                &lt;!&ndash;                                <div id="hider2" title="Tip: wait for line chart to load (overall cost vs. iteration)."></div>&ndash;&gt;-->
+                        <!--                                <div id="container1" style="display: none;height: 200px;width: 400px"></div>-->
+                        <!--                            </td>-->
+                        <!--                        </tr>-->
+                        </tbody>
+                    </table>
+                    <div id="load_note" style="float:left;width: 200px;display:none;margin-left: 10px;padding-top: 6px">
+                        计算中...
+                    </div>
+                    <!--                    <div id="container1" style="display: none;height: 200px;width: 400px"></div>-->
+                </div>
+            </div>
+        </div>
+        <div className="col-lg-6">
+            <div className="panel panel-default med-bottomProv" style="margin-bottom:+1.4vh">
+                <div className="panel-heading">
+                    <h2 className="panel-title" style="display:inline-block" data-toggle="tooltip"
+                        data-placement="right">Bi-clustering View</h2>
+                    <!--                    <div id="textToChange" style="display:inline-block">[Sorting:</div>-->
+                    <!--                    <select id="param-SortM-view" name="param-SortM-view" onchange="ReSort(false)">-->
+                    <!--                        <option value="1" selected>Quality Metrics Average (QMA)</option>-->
+                    <!--                        <option value="2">Neighborhood Hit (NH)</option>-->
+                    <!--                        <option value="3">Trustworthiness (T)</option>-->
+                    <!--                        <option value="4">Continuity (C)</option>-->
+                    <!--                        <option value="5">Stress (S)</option>-->
+                    <!--                        <option value="6">Shepard Diagram Correlation (SDC)</option>-->
+                    <!--                    </select>-->
+                    <!--                    ]-->
+                    <div style="display:inline-block; float:right">
+                        <button type="button" className="buttonOptimize" onClick='StartCOCluster2();'
+                                style="padding: 5px 5px 5px 5px" data-toggle="tooltip" data-placement="right">Begin
+                            Biclustering
+                        </button>
+                    </div>
+                </div>
+                <div className="panel-body">
+                    <div id="container7"
+                         style="height: 60%;width: 300px;margin-top:5px;margin-left: 10px;position: absolute"></div>
+                    <div id="container8"
+                         style="height: 60%;width: 400px;margin-top:5px;margin-left: 545px;position: absolute"></div>
+                    <!--                    <div id="ProjectionsVisual"></div>-->
+                </div>
+            </div>
+            <div className="panel panel-default med-bottom-neigh">
+                <div className="panel-heading">
+                    <h2 className="panel-title" style="display:inline-block" data-toggle="tooltip"
+                        data-placement="right">Free Exploration</h2>
+                    <!--                    [Visualization:-->
+                    <!--                    <select id="param-NB-view" name="param-NB-view" onchange="LineBar()">-->
+                    <!--                        <option value="1" selected>Bar Chart</option>-->
+                    <!--                        <option value="2">Difference Bar Chart</option>-->
+                    <!--                        <option value="3">Line Plot</option>-->
+                    <!--                        <option value="4">Difference Line Plot</option>-->
+                    <!--                    </select>-->
+                    <!--                    ]-->
+                    <!--                    <div id="knnBarChartDetails"style="display:inline-block; float:right">-->
+                    <!--                    </div>-->
+                </div>
+                <div className="panel-body">
+                    <div id="knnBarChart"></div>
+                    <div id="hider"></div>
+                </div>
+            </div>
+            <svg id="SvgAnnotator"></svg>
+            <svg id="modtSNEcanvas_svg"></svg>
+            <svg id="modtSNEcanvas_svg_Schema"></svg>
+            <div id="modtSNEDiv">
+                <div id="modtSNEcanvas">
+                    <div id="Cluster_right"
+                         style="height: 100%;margin-left: 545px;width: 400px;position: absolute"></div>
+                    <div id="Cluster_left" style="margin-left: 10px;height: 100%;width: 300px;position: absolute"></div>
+                    <div id="links" style="margin-left:310px;height:100%;width: 235px;position: absolute "></div>
+                </div>
+            </div>
+        </div>
+        <div className="col-lg-3">
+            <div className="panel panel-default">
+                <div className="panel-heading">
+                    <h2 className="panel-title" data-toggle="tooltip" data-placement="right">Visual Parameter</h2>
+                </div>
+                <div className="panel-body" id="commBtn">
+                    <table className="table table-borderless" style="border-collapse: separate ;border-spacing: 10px">
+                        <tbody>
+                        <tr>
+                            <td scope="row" colSpan="3"><label htmlFor="male" data-toggle="tooltip"
+                                                               data-placement="right">Algorithm Selection &nbsp;</label>
+                                <select id="param-Algorithm" name="param-Algorithm" ;">
+                                <option selected="selected" value="SpectralBiclustering">SpectralBiclustering</option>
+                                <option value="SpectralCoclustering">SpectralCoclustering</option>
+                                </select>
+                            </td>
+                            <!--                            <td rowspan="3"><svg id="legend4"></svg></td>-->
+                            <!--                            <td></td>-->
+                            <!--                            <td rowspan="5"><svg id="legend1"></svg></td>-->
+                        </tr>
+                        <tr>
+                            <td scope="row" colSpan="3">
+                                <label htmlFor="male" data-toggle="tooltip" data-placement="right">Row_Cluster_num
+                                    &nbsp;&nbsp;&nbsp;&nbsp;</label>
+                                <input id="param-Row_Cluster_num"
+                                       style="font-size: 15px; border-radius: 5px;width: 70px;text-align: center"
+                                       value="3">
+                                <!--                                <label for="male" data-toggle="tooltip" data-placement="right">Col_Cluster_name</label>-->
+                                <!--                                <input  type="text" style="width: 50px">-->
+                                <!--                                <output for="param-neighborHood" id="param-neighborHood-value " ></output>-->
+                                <!--                                <label for="male" data-toggle="tooltip" data-placement="right" title="Tip: remaining cost of each point throughout the entire projection.">Remaining cost</label>-->
+                                <!--                                <label id="selectionLabel" data-toggle="tooltip" data-placement="right" title="Tip: change between size/radius and color encodings.">Size</label>-->
+                            </td>
+                        </tr>
+                        <tr>
+                            <td scope="row" colSpan="3">
+                                <label htmlFor="male" data-toggle="tooltip" data-placement="right">Col_Cluster_num
+                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+                                <input id="param-Col_Cluster_num"
+                                       style="font-size: 15px; border-radius: 5px;width: 70px;text-align: center"
+                                       value="3">
+                            </td>
+                        </tr>
+                        <!--                        <tr>-->
+                        <!--                            <td scope="row"><label for="male" data-toggle="tooltip" data-placement="right" title="Tip: adapt the selection of points in the two-dimensional space. The options are a simple distance measurement between point and line or using the KNN algorithm.">Correl.</label>-->
+                        <!--                                <select id="param-correlationMeasur" name ="param-correlationMeasur" onchange="setReInitializeDistanceCorrelation(true);">-->
+                        <!--                                    <option selected="selected" value="1">Distance</option>-->
+                        <!--                                    <option value="2">KNN</option>-->
+                        <!--                                </select>-->
+                        <!--                            </td>-->
+                        <!--                        </tr>-->
+                        <tr>
+                            <td scope="row" colSpan="3"><label htmlFor="male" data-toggle="tooltip"
+                                                               data-placement="right">Relevance Selection &nbsp;</label>
+                                <select id="param-Relevance" name="param-Relevance"
+                                        onChange="Rel_Change(this.options[this.options.selectedIndex].value)">
+                                    <option selected="selected" value="Maximum">Maximum</option>
+                                    <option value="Average">Average</option>
+                                </select>
+                            </td>
+                            <!--                            <td rowspan="3"><svg id="legend4"></svg></td>-->
+                            <!--                            <td></td>-->
+                            <!--                            <td rowspan="5"><svg id="legend1"></svg></td>-->
+                        </tr>
+                        <tr>
+                            <td scope="row"><label htmlFor="param-maxthreshold" data-toggle="tooltip"
+                                                   data-placement="right">Maximum Threshold</label></td>
+                            <td><input id="param-maxthreshold" type="range" min="0" max="1" value="1" , step="0.01">
+                            </td>
+                            <td>
+                                <output htmlFor="param-maxthreshold" id="param-maxthreshold-value">1</output>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td scope="row"><label htmlFor="param-minthreshold" data-toggle="tooltip"
+                                                   data-placement="right">Minimum Threshold</label></td>
+                            <td><input id="param-minthreshold" type="range" min="0" max="1" value="0" , step="0.01">
+                            </td>
+                            <td>
+                                <output htmlFor="param-minthreshold" id="param-minthreshold-value">0</output>
+                            </td>
+                        </tr>
+                        <!--                        <tr>-->
+                        <!--                            <td scope="row">-->
+                        <!--                                <label for="param-corr" id="param-corrLabel" data-toggle="tooltip" data-placement="right" title="Tip: percentage of all points taken into account by Dimension Correlation.">Correl. threshold (%)</label>-->
+                        <!--                                <label for="param-corr2" id="param-corrLabel2" data-toggle="tooltip" data-placement="right" style="display: none;">K-value nearest neighbor</label>-->
+                        <!--                            </td>-->
+                        <!--                            <td>-->
+                        <!--                                <input id="param-corr" type="range" min="0" max="100" value="50", step="1" onchange="CalculateCorrel(true, 1);">-->
+                        <!--                                <input id="param-corr2" type="range" min="1" max="250" value="10", step="1" onchange="CalculateCorrel(true, 2);" style="display: none">-->
+                        <!--                            </td>-->
+                        <!--                            <td>-->
+                        <!--                                <output for="param-corr" id="param-corr-value">50</output>-->
+                        <!--                                <output for="param-corr2" id="param-corr-value2" style="display: none">10</output>-->
+                        <!--                            </td>-->
+                        <!--                        </tr>-->
+                        <!--                        <tr>-->
+                        <!--                            <td scope="row"><label for="param-lim" data-toggle="tooltip" data-placement="right" title="Tip: x*times the actual radius (increases/decreases points' radius).">Point radius scaling</label></td>-->
+                        <!--                            <td><input id="param-lim" type="range" min="1" max="4" value="3", step="0.5" onchange="setReInitialize(false);"></td>-->
+                        <!--                            <td><output for="param-lim" id="param-lim-value">3</output></td>-->
+                        <!--                        </tr>-->
+                        <!--                        <tr>-->
+                        <!--                            <td scope="row">-->
+                        <!--                                <input id="controls" type="checkbox">-->
+                        <!--                                Disable annotator</input>-->
+                        <!--                            </td>-->
+                        <!--                            <td style="text-align:center;"><button class="btn btn-default" style="padding: 2px 10px 2px 10px !important;" onclick="deleteAnnotations();" ><i class="fas fa-comment-slash fa-lg"></i>Erase</button></td>-->
+                        <!--                            <td colspan="2"><button class="btn btn-default" style="padding: 2px 10px 2px 10px !important;" onclick="BringBackAnnotations();" ><i class="fas fa-eye fa-lg"></i>Reveal</button></td>-->
+                        <!--                        </tr>-->
+                        <!--                        <tr>-->
+                        <!--                            <td scope="row">-->
+                        <!--                                <textarea type="text" id="comment" name="textforAnnotator" placeholder="Write a comment."></textarea>-->
+                        <!--                            </td>-->
+                        <!--                            <td style="text-align:center;"><div id="toggleAnnotator"><button class="btn btn-default" style="padding: 2px 10px 2px 10px !important;" onclick="setAnnotator();" ><i class="fas fa-comment fa-lg"></i>Attach</button></div></td>-->
+                        <!--                            <td colspan="2"><div id="continue"><button class="btn btn-default active" style="padding: 2px 10px 2px 10px !important;" onclick="setContinue();" ><i class="fas fa-chart-line fa-lg"></i>Analysis</button></div></td>-->
+                        <!--                        </tr>-->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div className="row">
+        <div className="col-lg-3" style="margin-top:-10px">
+            <div className="panel panel-default">
+                <div className="panel-heading">
+                    <h2 className="panel-title" style="display:inline-block" data-toggle="tooltip"
+                        data-placement="right">Compare Methods</h2>
+                    <!--                    <div id="datasetDetails" title="Tip: the number of dimensions/features and instances of a data set." style="display:inline-block; float:right"></div>-->
+                    <!--                    <div style="display:inline-block; float:right">-->
+                    <!--                        <button type="button" class="buttonOptimize" onclick='Cluster_View();'  >Cluster View</button>-->
+                    <!--                    </div>-->
+                </div>
+                <div className="row">
+                    <div className="panel-body">
+                        <!--                        <table class="table table-borderless paramTable" style="border-collapse: separate ;border-spacing: 10px">-->
+                        <!--                            <tbody>-->
+                        <!--                            <tr>-->
+                        <!--                                <td scope="row"><label id="select_cluster" for="param-dataset" data-toggle="tooltip" data-placement="right" >&nbsp;&nbsp;Select Cluster</label>-->
+                        <!--                                    &nbsp;-->
+                        <!--                                    <select id="param-cluster" name="param-cluster" style="font-size: 15px; border-radius: 5px;width: 100px" onChange="changeDataset3(this.value);">-->
+                        <!--                                        <option value="KMedoids" selected>KMedoids</option>-->
+                        <!--                                        <option value="KMedoids_DTW" >KMedoids_DTW</option>-->
+                        <!--                                        <option value="KMeans" >KMeans</option>-->
+                        <!--                                        <option value="AgglomerativeCluster" >AgglomerativeCluster</option>-->
+                        <!--                                        <option value="AgglomerativeCluster_DTW" >AgglomerativeCluster_DTW</option>-->
+                        <!--                                        <option value="SpectralCluster" >SpectralCluster</option>-->
+                        <!--                                        <option value="SpectralCluster_DTW" >SpectralCluster_DTW</option>-->
+                        <!--                                        <option value="Birch" >Birch</option>-->
+                        <!--                                        &lt;!&ndash;                                        <option value="empty">Upload File</option>&ndash;&gt;-->
+                        <!--                                    </select>-->
+                        <!--                                    &nbsp;-->
+                        <!--                                    <label for="param-n_cluster_num" data-toggle="tooltip" data-placement="right" >Cluster Num</label>-->
+                        <!--                                    &nbsp;-->
+                        <!--                                    <input id="param-n_cluster_num"  style="font-size: 15px; border-radius: 5px;width: 100px;text-align: center" value="3">-->
+                        <!--                                </td>-->
+                        <!--                            </tr>-->
+                        <!--                            </tbody>-->
+                        <!--                        </table>-->
+                        <div id="container1" style="display: block;height: 180px;width: 450px"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div className="col-lg-3 col-lg-offset-6" style="margin-top:-10px">
+            <div className="panel panel-default">
+                <div className="panel-heading">
+                    <h2 className="panel-title" data-toggle="tooltip" data-placement="right">Model Interpretation</h2>
+                </div>
+                <div className="panel-body" id="resetAllFilters">
+                    <div id="container4" style="display: block;height: 180px;width: 450px"></div>
+                    <!--                    <table class="table table-borderless centerTable">-->
+                    <!--                        <tbody>-->
+                    <!--                        <tr>-->
+                    <!--                            <td scope="row"><button class="btn btn-info active" onclick="setLayerProj();" style="margin-left: -1px !important" ><i class="fas fa-mouse-pointer fa-lg" data-toggle="tooltip" data-placement="right" title="Tip: in this mode the user can zoom in and out in the main visualization view and when hovering on a particular point he/she receives the exact data set's instance dimensions."></i>Points exploration</button></td>-->
+                    <!--                            <td><button class="btn btn-info" onclick="setLayerComp();" style="margin-left: -1.4px"><i class="far fa-object-group fa-lg" data-toggle="tooltip" data-placement="right" title="Tip: lasso selection in the main visualization view." ></i>Group selection</button></td>-->
+                    <!--                        </tr>-->
+                    <!--                        <tr>-->
+                    <!--                            <td scope="row"><button class="btn btn-info" onclick="setLayerSche();" style="margin-left: -2px !important"><i class="fas fa-draw-polygon fa-lg" data-toggle="tooltip" data-placement="right" title="Tip: draw a shape (polylines) and check the related dimensions correlations for your drawing/shape. With the left click you set one point and the right click you confirm the drawing for further analysis."></i>Dimension correl.</button></td>-->
+                    <!--                            <td><button class="btn btn-info" onclick="setReset();"><i class="fas fa-trash-alt fa-lg" data-toggle="tooltip" data-placement="right" title="Tip: reset all filters applied in the visualizations without losing the execution."></i>Reset all filters</button></td>-->
+                    <!--                        </tr>-->
+                    <!--                        </tbody>-->
+                    <!--                    </table>-->
+                </div>
+            </div>
+        </div>
+    </div>
+    <div className="row">
+        <div className="col-lg-3" style="margin-top:-10px">
+            <div className="panel panel-default">
+                <div className="panel-heading">
+                    <h2 className="panel-title" style="display:inline-block" data-toggle="tooltip"
+                        data-placement="right">Measuring Points Visualization</h2>
+                    <!--                    <div id="datasetDetails" title="Tip: the number of dimensions/features and instances of a data set." style="display:inline-block; float:right"></div>-->
+                    <div style="display:inline-block; float:right">
+                        <h2 className="panel-title" style="display:inline-block" data-toggle="tooltip"
+                            data-placement="right">Cluster View</h2>
+                        <input type="checkbox" id="cluster_switch" className="switch">
+                        <!--                        <button type="button" class="buttonOptimize" onclick='Cluster_View();'  >Cluster View</button>-->
+                    </div>
+                    <!--                    <h2 class="panel-title" data-toggle="tooltip" data-placement="right" style="display:inline-block" >Shepard Heatmap</h2>-->
+                    <!--                    <div style="display:inline-block; float:right">-->
+                    <!--                        [Visualization:-->
+                    <!--                        <select id="param-SH-view" name="param-SH-view" onchange="ShepardHeatMap()">-->
+                    <!--                            <option value="1" selected>Heatmap</option>-->
+                    <!--                            <option value="2">Diagram</option>-->
+                    <!--                        </select>-->
+                    <!--                        ]-->
+                    <!--                    </div>-->
+                </div>
+                <div className="panel-body">
+                    <div id="load_note2"
+                         style="float:left;width: 200px;display:none;margin-left: 10px;padding-top: 6px">计算中...
+                    </div>
+                    <table className="table table-borderless paramTable"
+                           style="border-collapse: separate ;border-spacing: 10px">
+                        <tbody>
+                        <tr>
+                            <td scope="row" colSpan="3"><label id="select_cluster" htmlFor="param-dataset"
+                                                               data-toggle="tooltip" data-placement="right">Select
+                                Cluster</label>
+                                &nbsp;
+                                <select id="param-cluster" name="param-cluster"
+                                        style="font-size: 15px; border-radius: 5px;width: 100px">
+                                    <option value="KMedoids" selected>KMedoids</option>
+                                    <option value="KMedoids_DTW">KMedoids_DTW</option>
+                                    <option value="KMeans">KMeans</option>
+                                    <option value="AgglomerativeCluster">AgglomerativeCluster</option>
+                                    <option value="AgglomerativeCluster_DTW">AgglomerativeCluster_DTW</option>
+                                    <option value="SpectralCluster">SpectralCluster</option>
+                                    <option value="SpectralCluster_DTW">SpectralCluster_DTW</option>
+                                    <option value="Birch">Birch</option>
+                                    <!--                                        <option value="empty">Upload File</option>-->
+                                </select>
+                                &nbsp;&nbsp;&nbsp;
+                                <label htmlFor="param-n_cluster_num" data-toggle="tooltip" data-placement="right">Cluster
+                                    Num</label>
+                                &nbsp;
+                                <input id="param-n_cluster_num"
+                                       style="font-size: 15px; border-radius: 5px;width: 70px;text-align: center"
+                                       value="3">
+                            </td>
+                        </tr>
+                        <!--                        <tr>-->
+                        <!--                            <td scope="row"><label for="param-interval" data-toggle="tooltip" data-placement="right">Interval</label></td>-->
+                        <!--                            <td colspan="1"><input id="param-interval"  type="range" min="1" max="30" value="1", step="1" ></td>-->
+                        <!--                            <td><output for="param-interval" id="param-interval-value">1</output></td>-->
+                        <!--                        </tr>-->
+                        </tbody>
+                    </table>
+                    <div id="container2" style="display: block;height: 150px;width: 450px"></div>
+                    <div id="average" style="display: none">
+                        <table className="table table-borderless paramTable"
+                               style="display:block;border-collapse: separate ;border-spacing: 10px">
+                            <tbody>
+                            <tr>
+                                <td scope="row"><label htmlFor="param-interval" data-toggle="tooltip"
+                                                       data-placement="right">Interval</label></td>
+                                <td colSpan="1"><input id="param-interval" type="range" min="1" max="1000" value="1" ,
+                                                       step="1"></td>
+                                <td>
+                                    <output htmlFor="param-interval" id="param-interval-value">1s</output>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="container3" style="display: none;height: 150px;width: 450px"></div>
+                    <!--                    <div class="row">-->
+                    <!--                        <div class="col-lg-6">-->
+                    <!--                            <svg id="sheparheat"></svg>-->
+                    <!--                        </div>-->
+                    <!--                        <div class="col-lg-2">-->
+                    <!--                            <svg id="legend3"></svg>-->
+                    <!--                        </div>-->
+                    <!--                    </div>-->
+                </div>
+            </div>
+        </div>
+
+        <div className="col-lg-3 col-lg-offset-6" style="margin-top:-10px">
+            <div className="panel panel-default">
+                <div className="panel-heading">
+                    <h2 className="panel-title" style="display:inline-block" data-toggle="tooltip"
+                        data-placement="right">Model Testing And Coefficients</h2>
+                    <!--                    <div class="col-lg-8"></div>-->
+                    <!--                    <div class="col-lg-4">-->
+                    <!--                        <div class="param" style="display:inline-block; float:right; margin-top:-23px; margin-right: -18px">-->
+                    <!--                            <label for="param-corlim" style="display:inline-block; float: right" data-toggle="tooltip" data-placement="right" title="Tip: the minimum acceptable visible correlation. Default is 0, so the tool accepts all the correlations.">Min Correl.: #<output for="param-corlim" id="param-corlim-value" title="Tip: minimum visible correlation (range: 0.0 to 1.0)." style="display:inline-block; float:right">0.0</output></label>-->
+                    <!--                            <input id="param-corlim" type="range" min="0" max="1" value="0.0", step="0.1" style="display:inline-block; float:right" onchange="CalculateCorrel(true);">-->
+                    <!--                        </div>-->
+                    <!--                    </div>-->
+                </div>
+                <div className="panel-body">
+                    <!--                    <svg id="correlation"></svg>-->
+                    <div id="container5" style="display: block;height: 230px;width:100%"></div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div className="row">
+        <div className="col-lg-3">
+
+            <div className="col-lg-3" id="extra-information" style="width: 24.8vw">
+                <div className="panel panel-default right-side-hist">
+                    <div className="panel-heading">
+                        <h2 className="panel-title" style="display:inline-block;" data-toggle="tooltip"
+                            data-placement="right">Fusion Data</h2>
+                        <!--                        <div class="col-lg-7"></div>-->
+                        <!--                        <div class="col-lg-5">-->
+                        <!--                            <div class="param" style="display:inline-block; float:right; margin-top:-23px; margin-right: -18px">-->
+                        <!--                                <label for="param-costlim" style="display:inline-block; float: right" data-toggle="tooltip" data-placement="right" title="Tip: set the rate of the limiter for the minimum acceptable visible cost at the main visualization view.">Min Cost: #<output for="param-costlim" id="param-costlim-value" title="Tip: minimum visible cost rate (range: 0.1 to 1.0)." style="display:inline-block; float:right">1.0</output></label>-->
+                        <!--                                <input id="param-costlim" type="range" min="0.1" max="1" value="1", step="0.1" style="display:inline-block; float:right" onchange="setReInitialize(false);">-->
+                        <!--                            </div>-->
+                        <!--                        </div>-->
+                        <button type="button" className="buttonOptimize" onClick='Data_Fusion();' style="float:right;">
+                            Batch Estimation
+                        </button>
+                    </div>
+                    <div className="panel-body">
+                        <table className="table table-borderless paramTable"
+                               style="border-collapse: separate ;border-spacing: 10px">
+                            <tbody id="history_model">
+                            <tr>
+                                <td colSpan="3" style="width: 150px"><input type="checkbox" name="save_file_chec">&nbsp;高温过热器融合（AgglomerativeCluster_3）
+                                    <button name="open_button_filter" id="history_start">打开</button>&nbsp;<button
+                                            name="del_button_filter" id="history_del">删除
+                                    </button>
+                                </td>
+                                <!--                                <td ><button name="open_button_filter"  id="history_start" >打开</button>&nbsp;<button name="del_button_filter"  id="history_del" >删除</button></td>-->
+                            </tr>
+                            </tbody>
+                        </table>
+                        <!--                        <div id="costHist"></div>-->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div className="col-lg-3 col-lg-offset-6" style="margin-top:-1.5vh">
+            <div className="panel panel-default">
+                <div className="panel-heading">
+                    <h2 className="panel-title" data-toggle="tooltip" data-placement="right">Model Save</h2>
+                </div>
+                <div className="panel-body">
+                    <!--                    <div id="PCP" class="parcoords"></div>-->
+                    <div id="container6" style="display: block;height: 200px;width: 450px"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--    <div class="footer" style="margin-top: -25px">-->
+    <!--        <hr>-->
+    <!--        <p class="text-muted credit no-top-margin no-bottom-margin">-->
+    <!--            &copy; ISOVIS group 2019&ndash;2020-->
+    <!--        </p>-->
+    <!--        <p class="text-muted credit no-top-margin no-bottom-margin">-->
+    <!--            Last updated: June 15, 2020-->
+    <!--        </p>-->
+    <!--    </div>-->
+</div>
+
+<!-- Load the core visualization script. -->
+<script src="{{url_for('static', filename='js/tsne_vis.js')}}"></script>
+
+<script>
+
+    function render() {
+        myResponsiveComponent({
+            width: document.body.clientWidth,
+            height: document.body.clientHeight,
+        });
+    }
+
+    render();
+
+    window.addEventListener('resize', render);
+
+    // Tooltip
+    $(document).ready(function () {
+        $("[rel='tooltip']").tooltip();
+        $("#cluster_switch").on('click', function () {
+            // alert('计算中')
+            // $('#load_note').show()
+            Cluster_View()
+        });
+    });
+
+    // $(document).ready(function(){
+    //     $("#ExecuteBut").click(function(){
+    //         var mode = document.getElementById('param-EX-view').value
+    //         mode = parseInt(mode)
+    //
+    //         if (mode == 1) {
+    //             $("#myModal").modal('show');
+    //             $('.modal-backdrop').removeClass("modal-backdrop");
+    //         }
+    //     });
+    // });
+
+    function closeModalFun() {
+        $('#myModal').modal('hide');
+    }
+
+    // $("#cost").html('(Ov. Cost: ?)');
+    // $("#datasetDetails").html('(Num. of Dim. and Ins.: ?)');
+    $("#CategoryName").html('No labels');
+    $("#knnBarChartDetails").html('(Num. of Selected Points: 0/0)');
+    /* This script is used in order to give functionalities to the different buttons provide through the front-end. */
+    $('#param-lim').bind('input', function () {
+        $('#param-lim-value').text($('#param-lim').val());
+    });
+    $('#param-corr').bind('input', function () {
+        $('#param-corr-value').text($('#param-corr').val());
+    });
+    $('#param-corr2').bind('input', function () {
+        $('#param-corr-value2').text($('#param-corr2').val());
+    });
+    $('#param-corlim').bind('input', function () {
+        $('#param-corlim-value').text($('#param-corlim').val());
+    });
+    $('#param-costlim').bind('input', function () {
+        $('#param-costlim-value').text($('#param-costlim').val());
+    });
+    $('#param-n_cluster_max').bind('input', function () {
+        $('#param-n_cluster_max-value').text($('#param-n_cluster_max').val());
+    });
+    $('#param-earlyexag').bind('input', function () {
+        $('#param-earlyexag-value').text($('#param-earlyexag').val());
+    });
+    $('#param-n_cluster_min').bind('input', function () {
+        $('#param-n_cluster_min-value').text($('#param-n_cluster_min').val());
+    });
+    $('#param-interval').bind('input', function () {
+        $('#param-interval-value').text($('#param-interval').val() + 's');
+    });
+    $('#param-maxthreshold').bind('input', function () {
+        $('#param-maxthreshold-value').text($('#param-maxthreshold').val());
+    });
+    $('#param-minthreshold').bind('input', function () {
+        $('#param-minthreshold-value').text($('#param-minthreshold').val());
+    });
+    $('#param-maxiter').bind('input', function () {
+        $('#param-maxiter-value').text($('#param-maxiter').val());
+    });
+
+    // Get the container element
+    var btnContainer = document.getElementById("commBtn"); //Add a new comment button
+
+    // Get all buttons with class="btn" inside the container
+    var btns = btnContainer.getElementsByClassName("btn");
+    for (var i = 0; i < btns.length; i++) {
+        btns[i].addEventListener("click", function () {
+            let current = document.getElementById("commBtn").getElementsByClassName("active");
+            current[0].className = current[0].className.replace("btn btn-default active", "btn btn-default");
+            this.className += " active";
+        });
+    }
+
+    // Get the container element
+    var btnContainer2 = document.getElementById("resetAllFilters"); //resetAllFilters button
+
+    // Get all buttons with class="btn" inside the container
+    var btns2 = btnContainer2.getElementsByClassName("btn");
+
+    for (var i = 0; i < btns2.length; i++) {
+        btns2[i].addEventListener("click", function () {
+            let current = document.getElementsByClassName("active");
+            current[1].className = current[1].className.replace("btn btn-info active", "btn btn-info");
+            this.className += " active";
+        });
+    }
+
+    /* On resize refresh the shepardHeatmap */
+    window.onresize = function (event) {
+        if (document.getElementById('cost').hasChildNodes()) {
+
+            // Clear legend for the shepardHeatmap
+            //var svgLegend = d3.select("#legend3");
+            //svgLegend.selectAll("*").remove();
+
+            // Clear the SheapHeardmap before refreshing
+            //var svg = d3.select("#sheparheat");
+            //svg.selectAll("*").remove();
+
+            // Call the ShepardHeatmap again to be redrawn
+            //ShepardHeatMap();
+            MainVisual();
+
+        }
+    }
+
+    /* When the user clicks on the button,
+    toggle between hiding and showing the dropdown content */
+    function myFunction() {
+        document.getElementById("myDropdown").classList.toggle("show");
+    }
+
+    // Close the dropdown menu if the user clicks outside of it
+    window.onclick = function (event) {
+        if (!event.target.matches('.dropbtn')) {
+            var dropdowns = document.getElementsByClassName("dropdown-content");
+            var i;
+            for (i = 0; i < dropdowns.length; i++) {
+                var openDropdown = dropdowns[i];
+                if (openDropdown.classList.contains('show')) {
+                    openDropdown.classList.remove('show');
+                }
+            }
+        }
+    }
+    var dom1 = document.getElementById("container1");
+    var myChart1 = echarts.init(dom1, null, {renderer: 'svg'});
+    var dom2 = document.getElementById("container2");
+    var myChart2 = echarts.init(dom2, null, {renderer: 'svg'});
+    var dom3 = document.getElementById("container3");
+    var myChart3 = echarts.init(dom3, null, {renderer: 'svg'});
+    var dom4 = document.getElementById("container4");
+    var myChart4 = echarts.init(dom4, null, {renderer: 'svg'});
+    var dom5 = document.getElementById("container5");
+    var myChart5 = echarts.init(dom5, null, {renderer: 'svg'});
+    var dom6 = document.getElementById("container6");
+    var myChart6 = echarts.init(dom6, null, {renderer: 'svg'});
+    var dom7 = document.getElementById("container7");
+    var myChart7 = echarts.init(dom7, null, {renderer: 'svg'});
+    var dom8 = document.getElementById("container8");
+    var myChart8 = echarts.init(dom8, null, {renderer: 'svg'});
+    var option1 = {
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            position: function (pos, params, el, elRect, size) {
+                var obj = {top: 10};
+                obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 30;
+                return obj;
+            },
+            extraCssText: 'width: 170px',
+            formatter: function (params) {
+                // console.log(params)
+                function sortId(a, b) {
+                    return b.value[1] - a.value[1]
+                }
+
+                params.sort(sortId);
+                var relVal = '聚类' + params[0].axisValue
+                for (var i = 0, l = params.length; i < l; i++) {
+                    relVal += '<br/>' + params[i].marker + params[i].seriesName + ' : ' + params[i].data[1]
+                }
+                return relVal
+            }
+        },
+        legend: {
+            right: '10%',
+            // data: []
+        },
+        grid: {
+            left: '3%',
+            right: '3%',
+            bottom: '3%',
+            // width:'100%',
+            // height:'100%',
+            containLabel: true
+        },
+        // toolbox: {
+        //     feature: {
+        //         saveAsImage: {}
+        //     }
+        // },
+        xAxis: {
+            type: 'value',
+            max: 10,
+            min: 2,
+            interval: 1,
+            // boundaryGap: false,
+            // data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+        },
+        yAxis: {
+            type: 'value'
+        },
+        series: []
+    };
+    var option2 = {
+        toolbox: {
+            top: 0,
+            left: 0,
+            orient: 'vertical'
+        },
+        brush: {
+            toolbox: ['rect', 'clear'],
+            brushLink: 'all',
+            xAxisIndex: [0],
+            yAxisIndex: [0],
+            throttleType: 'debounce',
+            throttleDelay: 2000,
+            inBrush: {
+                colorAlpha: 1,
+                opacity: 1
+            },
+            brushStyle: {
+                borderWidth: 1,
+                color: 'rgba(120,140,180,0.3)',
+                borderColor: 'rgba(120,140,180,0.8)'
+            },
+            outOfBrush: {
+                colorAlpha: 0.1,
+                opacity: 0.1
+            }
+        },
+        grid: {
+            left: '10%',
+            right: '4%',
+            bottom: '5%',
+            top: '0.8%',
+            // width:'100%',
+            height: '100%',
+            containLabel: true
+        },
+        yAxis: {
+            splitNumber: 3,
+            // position: 'right',
+            type: 'category',
+            gridIndex: 0,
+            scale: true
+        },
+        xAxis: {
+            // max:65,
+            // min:0,
+            // splitNumber: 3,
+            // position: 'top',
+            type: 'category',
+            gridIndex: 0,
+            scale: true
+        },
+        tooltip: {
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            position: function (pos, params, el, elRect, size) {
+                var obj = {top: 10};
+                obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 30;
+                return obj;
+            },
+            formatter: function (param) {
+                // console.log("s",param)
+                return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 12px;padding-bottom: 2px;margin-bottom: 2px;"> ' + param.data[2] +
+                    '</div>';
+            }
+        },
+        visualMap: {
+            show: true,
+            min: -0.009,
+            max: 0.012,
+            type: 'continuous',
+            itemWidth: 10,
+            itemHeight: 40,
+            dimension: 3,
+            calculable: true,
+            realtime: true,
+            left: 0,
+            align: 'top',
+            inRange: {
+                color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+            },
+            textStyle: {
+                fontSize: 10
+            },
+            seriesIndex: [0]
+        },
+
+        series: [
+            {
+                type: 'scatter',
+                symbolSize: 8,
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+                data: [],
+                symbol: 'rect',
+                itemStyle: {
+                    normal: {
+                        color: function (params) {
+                            var colorList = [
+                                '#C1232B', '#B5C334', '#FCCE10', '#E87C25', '#27727B',
+                                '#FE8463', '#9BCA63', '#FAD860', '#F3A43B', '#60C0DD',
+                                '#D7504B', '#C6E579', '#F4E001', '#F0805A', '#26C0C0'
+                            ];
+                            return colorList[1]
+                        }
+                    }
+                }
+            }
+        ]
+    };
+    var option3 = {
+        grid: {
+            left: '4%',
+            right: '4%',
+            bottom: '3%',
+            top: '4%',
+            // width:'100%',
+            // height:'100%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            data: []
+        },
+        dataZoom: [
+            {
+                type: 'inside', // 使鼠标在图表中时滚轮可用
+                xAxisIndex: [0],
+            },
+        ],
+        tooltip: {
+            formatter: function (params) {
+                console.log(params)
+                return [
+                    // '类别名称: ' + param.seriesName,
+                    '时间: ' + params.name,
+                    '数值: ' + params.data.toFixed(2),
+                ].join('<br/>')
+            }
+        },
+        yAxis: {
+            type: 'value',
+            max: function (value) {
+                return parseInt(value.max + 1);
+            },
+            min: function (value) {
+                return parseInt(value.min - 1);
+            }
+        },
+        series: [{
+            data: [],
+            type: 'line'
+        }]
+    };
+    var option4 = {
+        tooltip: {
+            show: true,
+            trigger: 'axis',
+            axisPointer: {
+                type: 'shadow',
+            },
+        },
+        legend: {
+            left: 'center',
+            bottom: 0,
+            itemWidth: 15,
+            itemHeight: 11,
+            itemGap: 20,
+            borderRadius: 4,
+            textStyle: {
+                color: '#262C41',
+                fontSize: 14,
+            },
+            // data: legendData,
+        },
+        grid: [
+            {
+                left: '5%',
+                width: '40%',
+                containLabel: true,
+                bottom: 30,
+                top: 10
+            },
+            {
+                left: '52%',
+                width: '0%',
+                bottom: 30 + 16,
+                top: 10
+            },
+            {
+                right: '5%',
+                width: '40%',
+                containLabel: true,
+                bottom: 30,
+                top: 10
+            },
+        ],
+        xAxis: [
+            {
+                type: 'value',
+                inverse: true,
+                axisLabel: {
+                    show: true,
+                },
+                axisLine: {
+                    show: false,
+                },
+                axisTick: {
+                    show: false,
+                },
+                splitLine: {
+                    show: true,
+                },
+                axisLabel: {
+                    color: '#949AA8',
+                    margin: 0,
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                        type: 'dashed',
+                    },
+                },
+            },
+            {
+                gridIndex: 1,
+                show: true,
+                axisLabel: {
+                    color: '#949AA8',
+                    margin: 0,
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                        type: 'dashed',
+                    },
+                },
+            },
+            {
+                gridIndex: 2,
+                type: 'value',
+                axisLabel: {
+                    show: true,
+                },
+                axisLine: {
+                    show: false,
+                },
+                axisTick: {
+                    show: false,
+                },
+                splitLine: {
+                    show: true,
+                },
+                axisLabel: {
+                    color: '#949AA8',
+                    margin: 0,
+                },
+                splitLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                        type: 'dashed',
+                    },
+                },
+            },
+        ],
+        yAxis: [
+            {
+                type: 'category',
+                inverse: false,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                    },
+                },
+                axisTick: {
+                    show: false,
+                },
+                data: [1, 2, 3, 4],
+                position: 'right',
+                axisLabel: {
+                    show: false,
+                },
+                axisLine: {
+                    show: true,
+                },
+            },
+            {
+                type: 'category',
+                inverse: false,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                    },
+                },
+                axisTick: {
+                    show: false,
+                },
+                data: [1, 2, 3, 4],
+                gridIndex: 1,
+                position: 'center',
+                axisLabel: {
+                    align: 'center',
+                    padding: [8, 0, 0, 0],
+                    fontSize: 10,
+                    color: `#262C41`,
+                },
+                axisLine: {
+                    show: false,
+                },
+            },
+            {
+                type: 'category',
+                inverse: false,
+                axisLine: {
+                    lineStyle: {
+                        color: '#E0E0E0',
+                    },
+                },
+                axisTick: {
+                    show: false,
+                },
+                data: [1, 2, 3, 4],
+                gridIndex: 2,
+                position: 'left',
+                axisLabel: {
+                    show: false,
+                },
+                axisLine: {
+                    show: true,
+                },
+            },
+        ],
+        series: [
+            {
+                type: 'bar',
+                barWidth: 11,
+                stack: '总量1',
+                name: 'u解释x',
+                label: {
+                    // show:true,
+                    position: 'left',
+                },
+                itemStyle: {
+                    color: '#01C5B2',
+                    barBorderRadius: [4, 0, 0, 4],
+                },
+                data: [1, 2, 3, 4],
+            },
+            {
+                type: 'bar',
+                barWidth: 11,
+                stack: '总量1',
+                name: 'v解释x',
+                label: {
+                    show: true,
+                    position: 'left',
+                },
+                itemStyle: {
+                    // color: '#01C5B2',
+                    barBorderRadius: [4, 0, 0, 4],
+                },
+                data: [1, 2, 3, 4],
+            },
+            {
+                type: 'bar',
+                barWidth: 11,
+                xAxisIndex: 2,
+                yAxisIndex: 2,
+                name: 'u解释y',
+                stack: '总量2',
+                label: {
+                    // show:true,
+                    position: 'right',
+                },
+                itemStyle: {
+                    // color: '#FB6F6C',
+                    barBorderRadius: [0, 4, 4, 0],
+                },
+                data: [1, 2, 3, 4],
+            },
+            {
+                type: 'bar',
+                barWidth: 11,
+                xAxisIndex: 2,
+                yAxisIndex: 2,
+                name: 'v解释y',
+                stack: '总量2',
+                label: {
+                    show: true,
+                    position: 'right',
+                },
+                itemStyle: {
+                    color: '#FB6F6C',
+                    barBorderRadius: [0, 4, 4, 0],
+                },
+                data: [1, 2, 3, 4],
+            },
+        ],
+    };
+    var option5 = {
+        tooltip: {
+            formatter: function (param) {
+                console.log("s", param)
+                if (param.componentSubType == 'line') {
+                    // var value = param.value;
+                    return [
+                        // '类别名称: ' + param.seriesName,
+                        param.seriesName,
+                        param.name,
+                        '系数: ' + param.data.toFixed(2),
+                    ].join('<br/>')
+                    // return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 16px;padding-bottom: 7px;margin-bottom: 7px;"> ' + value[2] +
+                    //     '</div>';
+                } else if (param.componentSubType == "radar") {
+                    // var value = param.value;
+                    return [
+                        // '类别名称: ' + param.seriesName,
+                        '第一组相关性: ' + param.value[0].toFixed(2),
+                        '卡方计算值: ' + param.value[1].toFixed(2),
+                        '卡方临界: ' + param.value[2].toFixed(2),
+                    ].join('<br/>')
+                }
+                // var value = param.value;
+                // return '<div style="border-bottom: 1px solid rgba(255,255,255,.3); font-size: 16px;padding-bottom: 7px;margin-bottom: 7px;"> ' + value[2] +
+                //     '</div>';
+            }
+        },
+        legend: {
+            left: 'left',
+            top: '0%',
+            itemWidth: 15,
+            itemHeight: 11,
+            itemGap: 20,
+            borderRadius: 4,
+            textStyle: {
+                color: '#262C41',
+                fontSize: 14,
+            },
+            // data: legendData,
+        },
+        grid: [
+            {
+                bottom: '30%',
+                height: '20%',
+                width: '90%'
+            },
+            {
+                bottom: '5%',
+                height: '20%',
+                width: '90%'
+            }
+        ],
+        xAxis: [
+            {
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex: 0,
+                axisLabel: {
+                    show: false
+                },
+                axisTick: {
+                    show: false
+                }
+
+            },
+            {
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                gridIndex: 1,
+                axisLabel: {
+                    show: false
+                },
+                axisTick: {
+                    show: false
+                }
+            },
+        ],
+        yAxis: [
+            {
+                type: 'value',
+                gridIndex: 0,
+                splitNumber: 2
+            },
+            {
+                type: 'value',
+                gridIndex: 1,
+                splitNumber: 2
+            },
+        ],
+        radar: {
+            center: ['50%', '30%'],
+            radius: 50,
+            // shape: 'circle',
+            indicator: [
+                {name: 'uv相关性',},
+                {name: '卡方计算值',},
+                {name: '卡方临界值',},
+            ],
+            name: {
+                textStyle: {
+                    padding: [-10, -12]  // 控制文字padding
+                }
+            }
+        },
+        series: [
+            {
+                data: [150, 230, 224, 218, 135, 147, 260],
+                type: 'line',
+                name: '第1组',
+                xAxisIndex: 0,
+                yAxisIndex: 0
+            },
+            {
+                data: [150, 230, 224, 218, 135, 147, 260],
+                type: 'line',
+                name: '第2组',
+                xAxisIndex: 1,
+                yAxisIndex: 1
+            },
+            {
+                name: '预算 vs 开销（Budget vs spending）',
+                type: 'radar',
+                data: [
+                    {
+                        value: [4200, 3000, 20000],
+                        name: '第1组'
+                    },
+                    {
+                        value: [5000, 14000, 28000],
+                        name: '第2组'
+                    }
+                ],
+            },
+        ]
+    };
+    var option7 = {
+        grid: {
+            top: 5,
+            left: 0,
+            height: '90%',
+            width: '90%',
+            containLabel: true,
+        },
+        xAxis: {
+            type: 'category',
+            data: ['1', '2', '3', '4', '5', '6', '7'],
+
+        },
+        yAxis: {
+            type: 'value'
+        },
+        series: [{
+            data: [120, {
+                value: 200,
+                itemStyle: {
+                    color: '#a90000'
+                }
+            }, 150, 80, 70, 110, 130],
+            type: 'bar'
+        }]
+    };
+    // var option4 = {
+    //     singleAxis:{
+    //         show:false,
+    //         axisLabel:{
+    //             show:false
+    //         },
+    //         axisLine:{
+    //             show:false
+    //         },
+    //         axisTick:{
+    //             show:false
+    //         },
+    //         // left: 10,
+    //         type: 'category',
+    //         boundaryGap: false,
+    //         // top: (0 * 100 / 7 + 5) + '%',
+    //         // height: (100 / 7 - 10) + '%',
+    //     },
+    //     series: [{
+    //         singleAxisIndex: 0,
+    //         coordinateSystem: 'singleAxis',
+    //         symbolSize: 10,
+    //         data: [
+    //             [0,1],
+    //             [1,1],
+    //             [2,1],
+    //             [3,1],
+    //             [4,1],
+    //             [5,1],
+    //             [6,1],
+    //             [7,1],
+    //             [8,1],
+    //             [9,1],
+    //             [10,1],
+    //             [11,1],
+    //             [12,1],
+    //             [13,1],
+    //             [14,1],
+    //             [15,1],
+    //             [16,1],
+    //             [17,1],
+    //             [18,1],
+    //             [19,1],
+    //             [20,1],
+    //             [21,1],
+    //             [22,1],
+    //             [23,1],
+    //             [24,1],
+    //             [25,1],
+    //             [26,1],
+    //             [27,1],
+    //             [28,1],
+    //             [29,1],
+    //             [30,1],
+    //             [31,1],
+    //             [32,1],
+    //             [33,1],
+    //             [34,1],
+    //         ],
+    //         type: 'scatter'
+    //     }]
+    // };
+    myChart4.setOption(option4);
+    myChart5.setOption(option5);
+    myChart7.setOption(option7);
+    myChart8.setOption(option7);
+
+    var lineData = [{"x": 1, "y": 5}, {"x": 20, "y": 20},
+        {"x": 40, "y": 10}, {"x": 60, "y": 40},
+        {"x": 80, "y": 5}, {"x": 100, "y": 60}];
+    var da = [{"source": {"x": 0, "y": 25}, "target": {"x": 235, "y": 115}}, {
+        "source": {"x": 10, "y": 50},
+        "target": {"x": 200, "y": 160}
+    }]
+    // console.log(da.source.x)
+    //线生成器
+    var cluster_left_list;
+    var cluster_right_list;
+    var lineFunction = d3v3.svg.line()
+        .x(function (d) {
+            return d.x;
+        })
+        .y(function (d) {
+            return d.y;
+        })
+        .interpolate("linear");
+    var linear = d3v3.scale.linear()
+        .domain([0, 1])
+        .range([0, 10]);
+    var color = d3.scaleLinear()
+        .domain([0, 0.5, 0.6, 0.7, 0.8, 0.9, 1])
+        .range(['#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']);
+    var color2 = d3.scaleLinear()
+        .domain([0, 1])
+        .range(['#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']);
+    // color=function color(){
+    //     let [min, max] = d3.extent(data, d => d.usage);
+    //     if (min < 0) {
+    //     max = Math.max(-min, max);
+    //     return d3.scaleDiverging([-max, 0, max], t => d3.interpolateRdBu(1 - t));
+    //     }
+    //     return d3.scaleSequential([0, max], d3.interpolateReds);
+    // }
+
+    // //svg容器
+    // var X = $('#Cluster_right').position().top;
+    // var Y = $('#Cluster_right').position().left;
+    // console.log(X,Y)
+    var svgContainer = d3v3.select("#links").append("svg")
+        .attr("width", '100%')
+        .attr("height", '100%');
+    var tooltips = d3v3.select("#modtSNEDiv")
+        .append("div")
+        .attr("id", "tooltips")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+    var lineGraph = svgContainer.append("g")
+
+    function createLink(d) {
+        return "M" + d.source.x + "," + d.source.y
+            + "C" + (d.source.x + d.target.x) / 2 + "," + d.source.y
+            + " " + (d.source.x + d.target.x) / 2 + "," + d.target.y
+            + " " + d.target.x + "," + d.target.y;
+    }
+
+    //把path扔到容器中-- lineData和lineFunction，并给d赋属性
+    // var lineGraph = svgContainer
+    //     .selectAll('line')
+    //     .data(da)
+    //     .enter()
+    //     .append("path")
+    //     .attr("d",function (d,i){
+    //         console.log(d,i)
+    //         return createLink(d)
+    //     })
+    //     .attr("stroke","green")
+    //     .attr("stroke-width",2)
+    //     .attr("fill","none");
+
+    function cluster_analysis() {
+        $('#load_note').show()
+        var wenjian = $('#param-dataset  option:selected').val();
+        var cluster_max = $('#param-n_cluster_max').val();
+        var cluster_min = $('#param-n_cluster_min').val();
+        var position = $('#param-position  option:selected').val();
+        $.ajax({
+            type: "POST",
+            url: "Cluster_Compare",
+            dataType: "json",
+            data: {"wenjian": wenjian, "cluster_max": cluster_max, "cluster_min": cluster_min, "position": position},
+            // async: false,
+            success: function (data) {
+                console.log(data);
+                option1.series = ser(data['all_score'], data['cluster_name']);
+                // option1.legend=data['cluster_name'];
+                option1.xAxis.min = parseInt(cluster_min);
+                option1.xAxis.max = cluster_max - 1;
+                console.log(option1)
+                myChart1.setOption(option1)
+                option2['series'][0]["data"] = data['erced'];
+                option2["visualMap"]["max"] = data["max"];
+                option2["visualMap"]["min"] = data["min"];
+                myChart2.setOption(option2);
+                // $('#load_note').hide()
+                // $('#container1').show()
+            },
+            complete: function (XMLHttpRequest, status) {
+                $("#load_note").hide()
+                $('#container1').show()
+                if (status != 'success') {
+                    alert("error！")
+                }
+            }
+        });
+        // $('#load_note').hide()
+    }
+
+    function ser(data, column) {
+        var parallel = [];
+        for (var i = 0; i < column.length; i++) {
+            parallel.push({name: column[i], type: 'line', data: data[i]});
+        }
+        // console.log(parallel);
+        return parallel;
+    };
+    var jishu = 0;
+    var maa, mii;
+    var pre_cluster_name = 'x', pre_cluster_num = 0;
+    var indexKuang;
+
+    function Cluster_View() {
+        // $('#load_note2').show()
+        // document.getElementById('load_note2').style.display="block";
+        // myChart2.showLoading({
+        //     text: 'loading',
+        //     color: '#c23531',
+        //     textColor: '#000',
+        //     maskColor: 'rgba(255, 255, 255, 0.2)',
+        //     zlevel: 0,
+        // });
+        var cluster_name = $('#param-cluster  option:selected').val();
+        var cluster_num = $('#param-n_cluster_num').val();
+        var wenjian = $('#param-dataset  option:selected').val();
+        var position = $('#param-position  option:selected').val();
+        if (pre_cluster_name != cluster_name || pre_cluster_num != cluster_num) {
+            jishu = 0;
+            pre_cluster_name = cluster_name;
+            pre_cluster_num = cluster_num;
+        }
+        if (jishu == 0) {
+            alert('计算中...')
+            $.ajax({
+                type: "POST",
+                url: "Clustering",
+                dataType: "json",
+                data: {
+                    "cluster_name": cluster_name,
+                    "cluster_num": cluster_num,
+                    "wenjian": wenjian,
+                    "position": position,
+                    "is_Fusion": 0
+                },
+                async: false,
+                success: function (data) {
+                    console.log(data);
+
+                    option2['series'][0]["data"] = data['erced'];
+                    maa = data["max"];
+                    mii = data["min"];
+                    // myChart2.setOption(option2);
+                    // $('#load_note').hide()
+                    // $('#container1').show()
+                },
+                complete: function (XMLHttpRequest, status) {
+                    if (status != 'success') {
+                        alert("error！")
+                    }
+                    // $('#load_note2').hide()
+                }
+            });
+            jishu = 1;
+        }
+        // myChart2.hideLoading();
+        if ($("#cluster_switch").is(':checked')) {
+            // console.log("在ON的状态下");
+            var cate = []
+            for (var i = 0; i < cluster_num; i++) {
+                cate.push(i.toString())
+            }
+            console.log(cate)
+            option2.visualMap = {
+                type: 'piecewise',
+                categories: cate,
+                itemWidth: 10,
+                itemHeight: 10,
+                itemGap: 4,
+                dimension: 4,
+                // min:0,
+                // max:3,
+                inRange: {
+                    color: ['#0780cf', '#b6b51f', '#fa6d1d', '#0e2c82']
+                },
+                // range:[570,614],
+                calculable: true,
+                realtime: true,
+                textStyle: {
+                    fontSize: 10
+                },
+                seriesIndex: [0],
+            };
+            console.log(option2)
+            myChart2.setOption(option2);
+        } else {
+            // console.log("在OFF的状态下");
+            // option2["visualMap"]["dimension"]=[4]
+            option2.visualMap = {
+                type: 'continuous',
+                itemWidth: 10,
+                itemHeight: 40,
+                dimension: 3,
+                min: mii,
+                max: maa,
+                inRange: {
+                    color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                },
+                // range:[570,614],
+                calculable: true,
+                realtime: true,
+                textStyle: {
+                    fontSize: 10
+                },
+                seriesIndex: [0],
+            };
+            myChart2.setOption(option2);
+        }
+        // document.getElementById('load_note2').style.display="none";
+        // $('#load_note2').hide()
+    }
+
+    function Data_Fusion() {
+        alert("开始融合...")
+        var cluster_name = $('#param-cluster  option:selected').val();
+        var cluster_num = $('#param-n_cluster_num').val();
+        var wenjian = $('#param-dataset  option:selected').val();
+        var position = $('#param-position  option:selected').val();
+        $.ajax({
+            type: "POST",
+            url: "Clustering",
+            dataType: "json",
+            data: {
+                "cluster_name": cluster_name,
+                "cluster_num": cluster_num,
+                "wenjian": wenjian,
+                "position": position,
+                "is_Fusion": 1
+            },
+            async: false,
+            success: function (data) {
+                console.log(data);
+
+                // option2['series'][0]["data"] = data['erced'];
+                // maa = data["max"];
+                // mii = data["min"];
+                // myChart2.setOption(option2);
+                // $('#load_note').hide()
+                // $('#container1').show()
+            },
+            complete: function (XMLHttpRequest, status) {
+                if (status != 'success') {
+                    alert("error！")
+                }
+                table_history_model();
+                // $('#load_note2').hide()
+            }
+        });
+
+    }
+
+    table_history_model()
+
+    function table_history_model() {
+        $("#history_model").html("")
+        $.ajax({
+            url: '/history_model',
+            type: 'GET',
+            data: {},
+            success: function (args) {
+                console.log(args)
+                for (var i = 0; i < args.file.length; i++)
+                    $('#history_model').append('<tr><td colspan="1" ><input type="checkbox" name="save_file_chec" value="' + args.file[i] + '">&nbsp;' + args.file[i] + '</td><td class="form-inline"><button name="open_button_filter" _file_name=' + args.file[i] + ' id="history_start' + i + '" class="form-control btn-sm">打开</button>&nbsp;&nbsp;<button name="del_button_filter" _file_name = ' + args.file[i] + ' id="history_del' + i + '" class="form-control btn-sm">删除</button></td></tr>')
+                for (var i = 0; i < args.file.length; i++) {
+                    $("#history_start" + i).on("click", {key: i}, function (event) {
+                        var button_key = event.data.key
+                        var file_name = $("#history_start" + button_key).attr("_file_name")
+                        open_file(file_name)
+                    });
+                    $("#history_del" + i).on("click", {key: i}, function (event) {
+                        var button_key = event.data.key
+                        var file_name = $("#history_del" + button_key).attr("_file_name")
+                        del_file(file_name)
+                    });
+                }
+            },
+            complete: function (XMLHttpRequest, status) {
+                if (status != 'success') {
+                    alert("error！")
+                }
+            }
+        });
+    }
+
+    function del_file(file_name) {
+        $.ajax({
+            url: '/del_history_model',
+            type: 'GET',
+            data: {
+                file_name: file_name
+            },
+            success: function (args) {
+                alert("已删除")
+                table_history_model()
+            }
+        });
+    };
+    var open_count = 0;
+    var cluster_count = 1;
+    var isChange = 's';
+    var num;
+    var suoyou_links;
+    var cluster_xgx;
+    var cluster_pj;
+
+    function open_file(file_name) {
+        console.log(file_name)
+        if (isChange == file_name) {
+            open_count = 0;
+        } else {
+            open_count = 1;
+            isChange = file_name;
+        }
+        if (open_count == 1) {
+            $.ajax({
+                url: '/open_history_model',
+                type: 'GET',
+                data: {
+                    file_name: file_name
+                },
+                async: false,
+                success: function (data) {
+                    console.log(data);
+
+                    option2['series'][0]["data"] = data['erced'];
+                    maa = data["max"];
+                    mii = data["min"];
+                    num = data['cluster_num'];
+                },
+                complete: function (XMLHttpRequest, status) {
+                    if (status != 'success') {
+                        alert("error！")
+                    }
+                }
+            });
+        }
+        console.log(cluster_count, num)
+        if (cluster_count == 0) {
+            // console.log("在ON的状态下");
+            var cate = []
+            for (var i = 0; i < num; i++) {
+                cate.push(i.toString())
+            }
+            console.log(cate)
+            option2.visualMap = {
+                type: 'piecewise',
+                categories: cate,
+                itemWidth: 10,
+                itemHeight: 10,
+                dimension: 4,
+                itemGap: 4,
+                // min:0,
+                // max:3,
+                inRange: {
+                    color: ['#0780cf', '#b6b51f', '#fa6d1d', '#0e2c82']
+                },
+                // range:[570,614],
+                calculable: true,
+                realtime: true,
+                textStyle: {
+                    fontSize: 10
+                },
+                seriesIndex: [0],
+            };
+            console.log(option2)
+            myChart2.setOption(option2);
+            cluster_count = 1;
+        } else {
+            // console.log("在OFF的状态下");
+            // option2["visualMap"]["dimension"]=[4]
+            option2.visualMap = {
+                type: 'continuous',
+                itemWidth: 10,
+                itemHeight: 40,
+                dimension: 3,
+                min: mii,
+                max: maa,
+                inRange: {
+                    color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
+                },
+                // range:[570,614],
+                calculable: true,
+                realtime: true,
+                textStyle: {
+                    fontSize: 10
+                },
+                seriesIndex: [0],
+            };
+            myChart2.setOption(option2);
+            cluster_count = 0;
+        }
+    };
+
+    function StartCOCluster2() {
+        var dataset = document.getElementsByName('save_file_chec');
+        var Row_Cluster_num = $('#param-Row_Cluster_num').val();
+        var Col_Cluster_num = $('#param-Col_Cluster_num').val();
+        var Relevance_sel = $('#param-Relevance  option:selected').val();
+        console.log(dataset)
+        var value = new Array();
+        for (var i = 0; i < dataset.length; i++) {
+            if (dataset[i].checked)
+                value.push(dataset[i].value);
+        }
+        console.log(value, Row_Cluster_num, Col_Cluster_num)
+        var div_height = $("#Cluster_left").height();
+        console.log(div_height)
+        $.ajax({
+            type: "POST",
+            url: "CoCluster",
+            dataType: "json",
+            async: false,
+            data: {
+                "value": JSON.stringify(value),
+                "Row_Cluster_num": Row_Cluster_num,
+                "Col_Cluster_num": Col_Cluster_num
+            },    // 传递列表
+            success: function (data) {
+                console.log(data)
+                var cluster1 = data['cluster1'];
+                var cluster2 = data['cluster2'];
+                cluster_xgx = data['cluster_xgx'];
+                cluster_pj = data['cluster_pj'];
+                var data_len = data['data_len'];
+                cluster_left_list = data['name1'];
+                cluster_right_list = data['name2'];
+                var biwen_column = data['biwen_column'];
+                var qita_column = data['qita_column'];
+                var link1 = [];
+                var link2 = [];
+                var all_links = [];
+                console.log(cluster1.length);
+                $('#Cluster_left').empty();
+                $('#Cluster_right').empty();
+                for (var i = 0; i < cluster1.length; i++) {
+                    var data1 = [];
+                    var data2 = [];
+                    var xdata = []
+                    for (var j = 0; j < data_len[0]; j++) {
+                        // divheight=90/data_len[0]*i
+                        xdata.push(j)
+                        if (cluster1[i].indexOf(j) > -1) {
+                            data1.push([j, biwen_column[j]])
+                        } else {
+                            data2.push([j, biwen_column[j]])
+                        }
+                    }
+                    ;
+                    console.log(data1, data2)
+                    divheight = ((div_height - cluster1.length * 10) / (cluster1.length + 1))
+                    console.log(divheight)
+                    link1.push([0, (divheight + 10) * i + divheight + 5])
+                    $('#Cluster_left').append("<div onclick='jizhong(this)' onmouseover='over1(this)' onmouseout='out1(this)' style='margin-top:" + divheight + "px;border-radius: 10px;border: 2px solid #d1b38a;height: 10px;width: 100%;' id='input_cluster" + i + "'></div>")
+                    var dom = document.getElementById("input_cluster" + i);
+                    var myChart = echarts.init(dom, null, {renderer: 'svg'});
+                    var option = {
+                        tooltip: {
+                            formatter: function (params) {
+                                console.log("1", params)
+                                return params.data[1]
+                            }
+                        },
+                        singleAxis: {
+                            show: false,
+                            axisLabel: {
+                                show: false
+                            },
+                            axisLine: {
+                                show: false
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            // left: 10,
+                            type: 'category',
+                            data: xdata,
+                            boundaryGap: false,
+                            // top: (0 * 100 / 7 + 5) + '%',
+                            // height: (100 / 7 - 10) + '%',
+                        },
+                        series: [
+                            {
+                                name: 'input_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 5,
+                                data: data1,
+                                type: 'scatter',
+                                itemStyle: {
+                                    // color:'gray',
+                                    opacity: 1
+                                },
+                                emphasis: {
+                                    scale: true,
+                                    itemStyle: {
+                                        color: 'red',
+                                        borderWidth: 100
+                                    }
+                                },
+                            },
+                            {
+                                name: 'input_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 5,
+                                data: data2,
+                                type: 'scatter',
+                                itemStyle: {
+                                    color: 'gray',
+                                    opacity: 0.2
+                                }
+                            }
+                        ]
+                    };
+                    myChart.setOption(option);
+                    myChart.on('click', function (params) {
+                        console.log(params)
+                        dianji1(params.seriesName, params.data[1])
+                    });
+                }
+                ;
+                for (var i = 0; i < cluster2.length; i++) {
+                    var data1 = [];
+                    var data2 = [];
+                    var xdata = []
+                    for (var j = 0; j < data_len[1]; j++) {
+                        // divheight=90/data_len[0]*i
+                        xdata.push(j)
+                        if (cluster2[i].indexOf(j) > -1) {
+                            data1.push([j, qita_column[j]])
+                        } else {
+                            data2.push([j, qita_column[j]])
+                        }
+                    }
+                    ;
+                    console.log(data1, data2)
+                    divheight = ((div_height - cluster2.length * 10) / (cluster2.length + 1))
+                    console.log(divheight)
+                    link2.push([235, (divheight + 10) * i + divheight + 5])
+                    $('#Cluster_right').append("<div onmouseover='over1(this)' onmouseout='out1(this)' style='margin-top:" + divheight + "px;border-radius: 10px;border: 2px solid #d1b38a;height: 10px;width: 100%;' id='output_cluster" + i + "'></div>")
+                    var dom = document.getElementById("output_cluster" + i);
+                    var myChart = echarts.init(dom, null, {renderer: 'svg'});
+                    var option = {
+                        tooltip: {
+                            formatter: function (params) {
+                                console.log("1", params)
+                                return params.data[1]
+                            }
+                        },
+                        singleAxis: {
+                            show: false,
+                            axisLabel: {
+                                show: false
+                            },
+                            axisLine: {
+                                show: false
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            // left: 10,
+                            type: 'category',
+                            data: xdata,
+                            boundaryGap: false,
+                            // top: (0 * 100 / 7 + 5) + '%',
+                            // height: (100 / 7 - 10) + '%',
+                        },
+                        series: [
+                            {
+                                name: 'output_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 5,
+                                data: data1,
+                                type: 'scatter',
+                                itemStyle: {
+                                    // color:'gray',
+                                    opacity: 1
+                                },
+                                emphasis: {
+                                    scale: true,
+                                    itemStyle: {
+                                        color: 'red',
+                                        borderWidth: 100
+                                    }
+                                },
+                            },
+                            {
+                                name: 'output_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 5,
+                                data: data2,
+                                type: 'scatter',
+                                itemStyle: {
+                                    color: 'gray',
+                                    opacity: 0.2
+                                }
+                            }
+                        ]
+                    };
+                    myChart.setOption(option);
+                    myChart.on('click', function (params) {
+                        console.log(params)
+                        dianji1(params.seriesName, params.data[1])
+                    });
+                }
+                ;
+                console.log(link1, link2)
+                // if (Relevance_sel=='Average'){
+                //     for(var i=0;i<link1.length;i++){
+                //         for(var j=0;j<link2.length;j++){
+                //             all_links.push({
+                //                 "source":{"x":link1[i][0],"y":link1[i][1]},
+                //                 "target":{"x":link2[j][0],"y":link2[j][1]},
+                //                 "value":cluster_xgx[i][j],
+                //                 "start":i,
+                //                 "end":j
+                //             })
+                //         }
+                //     }
+                // }
+                // else if(Relevance_sel=='Maximum')
+                // {
+                //
+                // }
+                for (var i = 0; i < link1.length; i++) {
+                    for (var j = 0; j < link2.length; j++) {
+                        all_links.push({
+                            "source": {"x": link1[i][0], "y": link1[i][1]},
+                            "target": {"x": link2[j][0], "y": link2[j][1]},
+                            "value": cluster_xgx[i][j],
+                            "value2": cluster_pj[i][j],
+                            "start": i,
+                            "end": j
+                        })
+                    }
+                }
+                suoyou_links = all_links;
+                console.log(all_links)
+                // var max=d3.max(all_links,function (d){return d.value})
+                // var min=d3.min(all_links,function (d){return d.value})
+                // console.log("max",max,min)
+                // color.domain([min,max])
+                d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+                lineGraph
+                    // .append("g")
+                    .selectAll('path')
+                    .data(all_links)
+                    .enter()
+                    .append("path")
+                    .attr("d", function (d, i) {
+                        console.log(d, i)
+                        return createLink(d)
+                    })
+                    // .attr("stroke","#ccc")
+                    // .attr("stroke-width",2)
+                    .attr("stroke", function (d) {
+                        return color(d.value);
+                    })
+                    .attr("fill", 'none')
+                    .attr("stroke-width", function (d) {
+                        return linear(Math.abs(d.value));
+                    })
+                    // .attr("fill",function (d){
+                    //     return color(d.value);
+                    // })
+                    .style("opacity", 0.7)
+                    .on("mouseover", overed)
+                    .on("mouseout", outed)
+                // .on("mousemove", mousemove);
+            }
+        });
+        // $.ajax({
+        //     type: "POST",
+        //     url: "CoCluster2",
+        //     dataType: "json",
+        //     async: false,
+        //     data: {"Row_Cluster_num": Row_Cluster_num, "Col_Cluster_num": Col_Cluster_num},    // 传递列表
+        //     success: function (data) {
+        //
+        //     }
+        // })
+    }
+
+    function StartCOCluster() {
+        var dataset = document.getElementsByName('save_file_chec');
+        var Row_Cluster_num = $('#param-Row_Cluster_num').val();
+        var Col_Cluster_num = $('#param-Col_Cluster_num').val();
+        var Relevance_sel = $('#param-Relevance  option:selected').val();
+        console.log(dataset)
+        var value = new Array();
+        for (var i = 0; i < dataset.length; i++) {
+            if (dataset[i].checked)
+                value.push(dataset[i].value);
+        }
+        console.log(value, Row_Cluster_num, Col_Cluster_num)
+        var div_height = $("#Cluster_left").height();
+        console.log(div_height)
+        $.ajax({
+            type: "POST",
+            url: "CoCluster",
+            dataType: "json",
+            async: false,
+            data: {
+                "value": JSON.stringify(value),
+                "Row_Cluster_num": Row_Cluster_num,
+                "Col_Cluster_num": Col_Cluster_num
+            },    // 传递列表
+            success: function (data) {
+                console.log(data)
+                var cluster1 = data['cluster1'];
+                var cluster2 = data['cluster2'];
+                cluster_xgx = data['cluster_xgx'];
+                cluster_pj = data['cluster_pj'];
+                var data_len = data['data_len'];
+                cluster_left_list = data['name1'];
+                cluster_right_list = data['name2'];
+                var biwen_column = data['biwen_column'];
+                var qita_column = data['qita_column'];
+                var link1 = [];
+                var link2 = [];
+                var all_links = [];
+                console.log(cluster1.length);
+                $('#Cluster_left').empty();
+                $('#Cluster_right').empty();
+                for (var i = 0; i < cluster1.length; i++) {
+                    var data1 = [];
+                    var data2 = [];
+                    var xdata = []
+                    for (var j = 0; j < data_len[0]; j++) {
+                        // divheight=90/data_len[0]*i
+                        xdata.push(j)
+                        if (cluster1[i].indexOf(j) > -1) {
+                            data1.push([j, biwen_column[j]])
+                        } else {
+                            data2.push([j, biwen_column[j]])
+                        }
+                    }
+                    ;
+                    console.log(data1, data2)
+                    divheight = ((div_height - cluster1.length * 30) / (cluster1.length + 1))
+                    console.log(divheight)
+                    link1.push([0, (divheight + 30) * i + divheight + 15])
+                    $('#Cluster_left').append("<div onclick='jizhong(this)' onmouseover='over1(this)' onmouseout='out1(this)' style='margin-top:" + divheight + "px;border-radius: 10px;border: 2px solid #d1b38a;height: 30px;width: 100%;' id='input_cluster" + i + "'></div>")
+                    var dom = document.getElementById("input_cluster" + i);
+                    var myChart = echarts.init(dom, null, {renderer: 'svg'});
+                    var option = {
+                        tooltip: {
+                            formatter: function (params) {
+                                console.log("1", params)
+                                return params.data[1]
+                            }
+                        },
+                        singleAxis: {
+                            show: false,
+                            axisLabel: {
+                                show: false
+                            },
+                            axisLine: {
+                                show: false
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            // left: 10,
+                            type: 'category',
+                            data: xdata,
+                            boundaryGap: false,
+                            // top: (0 * 100 / 7 + 5) + '%',
+                            // height: (100 / 7 - 10) + '%',
+                        },
+                        series: [
+                            {
+                                name: 'input_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 10,
+                                data: data1,
+                                type: 'scatter',
+                                itemStyle: {
+                                    // color:'gray',
+                                    opacity: 1
+                                },
+                                emphasis: {
+                                    scale: true,
+                                    itemStyle: {
+                                        color: 'red',
+                                        borderWidth: 100
+                                    }
+                                },
+                            },
+                            {
+                                name: 'input_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 10,
+                                data: data2,
+                                type: 'scatter',
+                                itemStyle: {
+                                    color: 'gray',
+                                    opacity: 0.2
+                                }
+                            }
+                        ]
+                    };
+                    myChart.setOption(option);
+                    myChart.on('click', function (params) {
+                        console.log(params)
+                        dianji1(params.seriesName, params.data[1])
+                    });
+                }
+                ;
+                for (var i = 0; i < cluster2.length; i++) {
+                    var data1 = [];
+                    var data2 = [];
+                    var xdata = []
+                    for (var j = 0; j < data_len[1]; j++) {
+                        // divheight=90/data_len[0]*i
+                        xdata.push(j)
+                        if (cluster2[i].indexOf(j) > -1) {
+                            data1.push([j, qita_column[j]])
+                        } else {
+                            data2.push([j, qita_column[j]])
+                        }
+                    }
+                    ;
+                    console.log(data1, data2)
+                    divheight = ((div_height - cluster2.length * 30) / (cluster2.length + 1))
+                    console.log(divheight)
+                    link2.push([235, (divheight + 30) * i + divheight + 15])
+                    $('#Cluster_right').append("<div onmouseover='over1(this)' onmouseout='out1(this)' style='margin-top:" + divheight + "px;border-radius: 10px;border: 2px solid #d1b38a;height: 30px;width: 100%;' id='output_cluster" + i + "'></div>")
+                    var dom = document.getElementById("output_cluster" + i);
+                    var myChart = echarts.init(dom, null, {renderer: 'svg'});
+                    var option = {
+                        tooltip: {
+                            formatter: function (params) {
+                                console.log("1", params)
+                                return params.data[1]
+                            }
+                        },
+                        singleAxis: {
+                            show: false,
+                            axisLabel: {
+                                show: false
+                            },
+                            axisLine: {
+                                show: false
+                            },
+                            axisTick: {
+                                show: false
+                            },
+                            // left: 10,
+                            type: 'category',
+                            data: xdata,
+                            boundaryGap: false,
+                            // top: (0 * 100 / 7 + 5) + '%',
+                            // height: (100 / 7 - 10) + '%',
+                        },
+                        series: [
+                            {
+                                name: 'output_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 10,
+                                data: data1,
+                                type: 'scatter',
+                                itemStyle: {
+                                    // color:'gray',
+                                    opacity: 1
+                                },
+                                emphasis: {
+                                    scale: true,
+                                    itemStyle: {
+                                        color: 'red',
+                                        borderWidth: 100
+                                    }
+                                },
+                            },
+                            {
+                                name: 'output_cluster',
+                                singleAxisIndex: 0,
+                                coordinateSystem: 'singleAxis',
+                                symbolSize: 10,
+                                data: data2,
+                                type: 'scatter',
+                                itemStyle: {
+                                    color: 'gray',
+                                    opacity: 0.2
+                                }
+                            }
+                        ]
+                    };
+                    myChart.setOption(option);
+                    myChart.on('click', function (params) {
+                        console.log(params)
+                        dianji1(params.seriesName, params.data[1])
+                    });
+                }
+                ;
+                console.log(link1, link2)
+                // if (Relevance_sel=='Average'){
+                //     for(var i=0;i<link1.length;i++){
+                //         for(var j=0;j<link2.length;j++){
+                //             all_links.push({
+                //                 "source":{"x":link1[i][0],"y":link1[i][1]},
+                //                 "target":{"x":link2[j][0],"y":link2[j][1]},
+                //                 "value":cluster_xgx[i][j],
+                //                 "start":i,
+                //                 "end":j
+                //             })
+                //         }
+                //     }
+                // }
+                // else if(Relevance_sel=='Maximum')
+                // {
+                //
+                // }
+                for (var i = 0; i < link1.length; i++) {
+                    for (var j = 0; j < link2.length; j++) {
+                        all_links.push({
+                            "source": {"x": link1[i][0], "y": link1[i][1]},
+                            "target": {"x": link2[j][0], "y": link2[j][1]},
+                            "value": cluster_xgx[i][j],
+                            "value2": cluster_pj[i][j],
+                            "start": i,
+                            "end": j
+                        })
+                    }
+                }
+                suoyou_links = all_links;
+                console.log(all_links)
+                // var max=d3.max(all_links,function (d){return d.value})
+                // var min=d3.min(all_links,function (d){return d.value})
+                // console.log("max",max,min)
+                // color.domain([min,max])
+                d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+                lineGraph
+                    // .append("g")
+                    .selectAll('path')
+                    .data(all_links)
+                    .enter()
+                    .append("path")
+                    .attr("d", function (d, i) {
+                        console.log(d, i)
+                        return createLink(d)
+                    })
+                    // .attr("stroke","#ccc")
+                    // .attr("stroke-width",2)
+                    .attr("stroke", function (d) {
+                        return color(d.value);
+                    })
+                    .attr("fill", 'none')
+                    .attr("stroke-width", function (d) {
+                        return linear(Math.abs(d.value));
+                    })
+                    // .attr("fill",function (d){
+                    //     return color(d.value);
+                    // })
+                    .style("opacity", 0.7)
+                    .on("mouseover", overed)
+                    .on("mouseout", outed)
+                // .on("mousemove", mousemove);
+            }
+        });
+    };
+
+    function dianji1(seriesName, name) {
+        console.log(seriesName, name)
+        if (seriesName == 'input_cluster') {
+            name = name.toString();
+            console.log(name)
+            var s = name.substr(0, name.length - 4)
+            console.log(s)
+            open_file(s)
+        }
+    }
+
+    function out1(param) {
+        var max_t = $('#param-maxthreshold').val();
+        var min_t = $('#param-minthreshold').val();
+        var sel = $('#param-Relevance  option:selected').val();
+        var lines = suoyou_links;
+        var lines2 = []
+        for (var i = 0; i < lines.length; i++) {
+            if (lines[i].value <= max_t && lines[i].value >= min_t) {
+                lines2.push(lines[i])
+            }
+        }
+        // 获取当前的ID
+        name = param.id
+        // 添加划过事件 恢复兄弟节点的透明度
+        $('#' + name).siblings().animate({"opacity": "1"}, 0);
+        if (sel == 'Average') {
+            d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+            lineGraph
+                // .append("g")
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                // .attr("stroke","#ccc")
+                // .attr("stroke-width",2)
+                .attr("stroke", function (d) {
+                    return color(d.value2);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value2));
+                })
+                // .attr("fill",function (d){
+                //     return color(d.value);
+                // })
+                .style("opacity", 0.7)
+                .on("mouseover", overed)
+                .on("mouseout", outed)
+        } else {
+            d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+            lineGraph
+                // .append("g")
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                // .attr("stroke","#ccc")
+                // .attr("stroke-width",2)
+                .attr("stroke", function (d) {
+                    return color(d.value);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value));
+                })
+                // .attr("fill",function (d){
+                //     return color(d.value);
+                // })
+                .style("opacity", 0.7)
+                .on("mouseover", overed)
+                .on("mouseout", outed)
+        }
+        // d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+        // lineGraph
+        //     // .append("g")
+        //     .selectAll('path')
+        //     .data(lines2)
+        //     .enter()
+        //     .append("path")
+        //     .attr("d",function (d,i){
+        //         console.log(d,i)
+        //         return createLink(d)
+        //     })
+        //     // .attr("stroke","#ccc")
+        //     // .attr("stroke-width",2)
+        //     .attr("stroke",function (d){
+        //         return color(d.value);
+        //     })
+        //     .attr("fill",'none')
+        //     .attr("stroke-width",function (d){
+        //         return linear(Math.abs(d.value));
+        //     })
+        //     // .attr("fill",function (d){
+        //     //     return color(d.value);
+        //     // })
+        //     .style("opacity", 0.7)
+        //     .on("mouseover",overed)
+        //     .on("mouseout",outed)
+    }
+
+    function over1(param) {
+        console.log(param.id)
+        var max_t = $('#param-maxthreshold').val();
+        var min_t = $('#param-minthreshold').val();
+        var sel = $('#param-Relevance  option:selected').val();
+        // var lines=suoyou_links;
+        // var lines2=[]
+        // for (var i=0;i<lines.length;i++){
+        //     if (lines[i].value<=max_t && lines[i].value>=min_t){
+        //         lines2.push(lines[i])
+        //     }
+        // }
+        name = param.id
+        $('#' + name).siblings().animate({"opacity": "0.1"}, 0);
+
+        shuzi = parseInt(name.replace(/[^0-9]/ig, ""));
+        console.log("shuzu", shuzi)
+        // shuzi=parseInt(name.substr(name.length-1,name.length))
+        // console.log(shuzi)
+        var lines = suoyou_links;
+        var lines2 = []
+        // console.log(suoyou_links)
+        // console.log(lines,lines.length)
+        // console.log("id",param.id.indexOf('input_cluster'))
+        for (var i = 0; i < lines.length; i++) {
+            if (param.id.indexOf('input_cluster') > -1) {
+                if (lines[i].start == shuzi && lines[i].value <= max_t && lines[i].value >= min_t) {
+                    lines2.push(lines[i])
+                }
+            } else {
+                if (lines[i].end == shuzi && lines[i].value <= max_t && lines[i].value >= min_t) {
+                    lines2.push(lines[i])
+                }
+            }
+        }
+        if (sel == 'Average') {
+            d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+            lineGraph
+                // .append("g")
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                // .attr("stroke","#ccc")
+                // .attr("stroke-width",2)
+                .attr("stroke", function (d) {
+                    return color(d.value2);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value2));
+                })
+                // .attr("fill",function (d){
+                //     return color(d.value);
+                // })
+                .style("opacity", 0.7)
+        } else {
+            d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+            lineGraph
+                // .append("g")
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                // .attr("stroke","#ccc")
+                // .attr("stroke-width",2)
+                .attr("stroke", function (d) {
+                    return color(d.value);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value));
+                })
+                // .attr("fill",function (d){
+                //     return color(d.value);
+                // })
+                .style("opacity", 0.7)
+        }
+        // d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+        // lineGraph
+        //     // .append("g")
+        //     .selectAll('path')
+        //     .data(lines2)
+        //     .enter()
+        //     .append("path")
+        //     .attr("d",function (d,i){
+        //         console.log(d,i)
+        //         return createLink(d)
+        //     })
+        //     // .attr("stroke","#ccc")
+        //     // .attr("stroke-width",2)
+        //     .attr("stroke",function (d){
+        //         return color(d.value);
+        //     })
+        //     .attr("fill",'none')
+        //     .attr("stroke-width",function (d){
+        //         return linear(Math.abs(d.value));
+        //     })
+        //     // .attr("fill",function (d){
+        //     //     return color(d.value);
+        //     // })
+        //     .style("opacity", 0.7)
+    }
+
+    function jizhong(param) {
+        console.log(param.id)
+    }
+
+    function mousemove(d, i) {
+        // console.log(d,i)
+        // console.log(d3v3.mouse(this))
+        tooltips.style("opacity", 1)
+            .html("1asdas")
+            .style("left", (d3v3.mouse(this)[0] + 50) + "px")
+            .style("top", (d3v3.mouse(this)[1]) + "px")
+    }
+
+    function Rel_Change(sel) {
+        console.log("sel", sel)
+        var max_t = $('#param-maxthreshold').val();
+        var min_t = $('#param-minthreshold').val();
+        var lines = suoyou_links;
+        var lines2 = []
+        for (var i = 0; i < lines.length; i++) {
+            if (lines[i].value <= max_t && lines[i].value >= min_t) {
+                lines2.push(lines[i])
+            }
+        }
+        d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+        if (sel == 'Average') {
+            lineGraph
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                .attr("stroke", function (d) {
+                    return color(d.value2);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value2));
+                })
+                .style("opacity", 0.7)
+                .on("mouseover", overed)
+                .on("mouseout", outed)
+        } else if (sel == 'Maximum') {
+            lineGraph
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                .attr("stroke", function (d) {
+                    return color(d.value);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value));
+                })
+                .style("opacity", 0.7)
+                .on("mouseover", overed)
+                .on("mouseout", outed)
+        }
+    }
+
+    $('#param-maxthreshold,#param-minthreshold').on('mouseup', function () {
+        var max_t = $('#param-maxthreshold').val();
+        var min_t = $('#param-minthreshold').val();
+        var sel = $('#param-Relevance  option:selected').val();
+        var lines = suoyou_links;
+        var lines2 = []
+        for (var i = 0; i < lines.length; i++) {
+            if (lines[i].value <= max_t && lines[i].value >= min_t) {
+                lines2.push(lines[i])
+            }
+        }
+        if (sel == 'Average') {
+            d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+            lineGraph
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                .attr("stroke", function (d) {
+                    return color(d.value2);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value2));
+                })
+                .style("opacity", 0.7)
+                .on("mouseover", overed)
+                .on("mouseout", outed)
+        } else {
+            d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+            lineGraph
+                .selectAll('path')
+                .data(lines2)
+                .enter()
+                .append("path")
+                .attr("d", function (d, i) {
+                    console.log(d, i)
+                    return createLink(d)
+                })
+                .attr("stroke", function (d) {
+                    return color(d.value);
+                })
+                .attr("fill", 'none')
+                .attr("stroke-width", function (d) {
+                    return linear(Math.abs(d.value));
+                })
+                .style("opacity", 0.7)
+                .on("mouseover", overed)
+                .on("mouseout", outed)
+        }
+        // d3v3.select("#links").select("svg").select("g").selectAll("path").remove()
+        // lineGraph
+        //     .selectAll('path')
+        //     .data(lines2)
+        //     .enter()
+        //     .append("path")
+        //     .attr("d",function (d,i){
+        //         console.log(d,i)
+        //         return createLink(d)
+        //     })
+        //     .attr("stroke",function (d){
+        //         return color(d.value);
+        //     })
+        //     .attr("fill",'none')
+        //     .attr("stroke-width",function (d){
+        //         return linear(Math.abs(d.value));
+        //     })
+        //     .style("opacity", 0.7)
+        //     .on("mouseover",overed)
+        //     .on("mouseout",outed)
+    });
+
+    function overed(d, i) {
+        // console.log(d,i)
+        lineGraph.selectAll("path").style("opacity", 0.1);
+        d3v3.select(this).style("opacity", 0.7);
+        $('#tooltips').show()
+        tooltips.style("opacity", 1)
+            .html("组合A：" + cluster_left_list[d.start].join("、") + '<br>' + "组合B：" + cluster_right_list[d.end].join("、") + '<br>' + "最大相关性：" + d.value)
+            .style("left", (d3v3.mouse(this)[0] + 50) + "px")
+            .style("top", (d3v3.mouse(this)[1]) + "px")
+        // d3.selectAll(d.incoming.map(d => d.path)).attr("stroke", colorin).raise();
+        // d3.selectAll(d.incoming.map(([d]) => d.text)).attr("fill", colorin).attr("font-weight", "bold");
+        // d3.selectAll(d.outgoing.map(d => d.path)).attr("stroke", colorout).raise();
+        // d3.selectAll(d.outgoing.map(([, d]) => d.text)).attr("fill", colorout).attr("font-weight", "bold");
+    }
+
+    function outed(d, i) {
+        // console.log(d,i)
+        lineGraph.selectAll("path").style("opacity", 0.7);
+        $('#tooltips').hide()
+        tooltips.style("opacity", 0)
+        // d3v3.select(this).style("opacity", 1);
+        // d3.selectAll(d.incoming.map(d => d.path)).attr("stroke", colorin).raise();
+        // d3.selectAll(d.incoming.map(([d]) => d.text)).attr("fill", colorin).attr("font-weight", "bold");
+        // d3.selectAll(d.outgoing.map(d => d.path)).attr("stroke", colorout).raise();
+        // d3.selectAll(d.outgoing.map(([, d]) => d.text)).attr("fill", colorout).attr("font-weight", "bold");
+    }
+
+    function fade(opacity) {
+        // console.log(opacity);
+        return function (d, i) {
+            console.log(d, i)
+            svg.selectAll("line").style("opacity", opacity);
+            // var associated_links = lines.filter(function(d) {
+            //     return d.source.index == i || d.target.index == i;
+            // });
+            // console.log(associated_links);
+            // associated_links.each(function(dLink, iLink) {
+            //     console.log(dLink,iLink);
+            //     //unfade links and nodes connected to the current node
+            //     d3.select(this).style("opacity", 1);
+            //     console.log(d3.select(this))
+            //     // d3.select(dLink.source).style("opacity", 1);
+            //     // d3.select(dLink.target).style("opacity", 1);
+            // });
+            // //鼠标放上去显示文字
+            // console.log(d3.mouse(this));
+            // if (opacity==0)
+            // {
+            //     return tooltip.style('visibility', 'visible').text(d.name).style('top', (event.pageY-10)+'px').style('left',(event.pageX+10)+'px');
+            // }
+            // else if (opacity==1)
+            // {
+            //     return tooltip.style('top', (event.pageY-10)+'px').style('left',(event.pageX+10)+'px')
+            // }
+        };
+    }
+
+    myChart2.on('brushSelected', function (params) {
+
+        console.log('brushSelected', params)
+        console.log('me', params.batch[0].selected[0].dataIndex)
+        indexKuang = params.batch[0].selected[0].dataIndex
+        if (indexKuang.length != 0) {
+            var position = $('#param-position  option:selected').val();
+            var wenjian = $('#param-dataset  option:selected').val();
+            console.log(indexKuang)
+            // if(check_state==1) {
+            $.ajax({
+                type: "POST",
+                url: "xuanqu",
+                dataType: "json",
+                async: false,
+                data: {"index": JSON.stringify(indexKuang), "choose_id": position, "wenjian": wenjian},    // 传递列表
+                success: function (data) {
+                    console.log(data)
+                    option3.xAxis.data = data['time'];
+                    option3.series[0].data = data['datajun'];
+                    // 画选取的点的图
+                    // optionkuang = {
+                    //     xAxis: {
+                    //         type: 'category',
+                    //         data: data['time']
+                    //     },
+                    //     yAxis: {
+                    //         type: 'value'
+                    //     },
+                    //     series: [{
+                    //         data: data['datajun'],
+                    //         type: 'line'
+                    //     }]
+                    // };
+                    console.log("1", option3)
+                    myChart3.setOption(option3)
+                    console.log("1", option3)
+                }
+            });
+            $('#average').show()
+            $('#container3').show()
+            // }
+        }
+    });
+    myChart2.on('brush', function (params) {
+        console.log(params)
+        $('#average').hide()
+        $('#container3').hide()
+    });
+    $('#param-interval').on('mouseup', function () {       //鼠标抬起事件(获取最后一个值)
+        var lastvalue = $('#param-interval').val();
+        var position = $('#param-position  option:selected').val();
+        var wenjian = $('#param-dataset  option:selected').val();
+        alert(lastvalue)
+        $.ajax({
+            type: "POST",
+            url: "xuanqu2",
+            dataType: "json",
+            async: false,
+            data: {
+                "index": JSON.stringify(indexKuang),
+                "valuerange": lastvalue,
+                "choose_id": position,
+                "wenjian": wenjian
+            },    // 传递列表
+            success: function (data) {
+                console.log(data)
+                option3.xAxis.data = data['time'];
+                option3.series[0].data = data['datajunfen'];
+                console.log("2", option3)
+                myChart3.setOption(option3, true)
+                console.log("2", option3)
+            }
+        });
+    });
+</script>
+
+</body>
+
+</html>
